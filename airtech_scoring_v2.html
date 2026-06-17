@@ -1,0 +1,1543 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Air Tech Scoring</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #222636;
+    --border: #2e3348;
+    --accent: #3b82f6;
+    --accent2: #22d3ee;
+    --green: #10b981;
+    --red: #ef4444;
+    --yellow: #f59e0b;
+    --text: #e2e8f0;
+    --text2: #94a3b8;
+    --text3: #64748b;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'Sarabun', sans-serif;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; font-size: 15px; }
+
+  /* ── LOGIN ── */
+  #loginScreen {
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, #0f1117 0%, #1a1d27 50%, #0f1117 100%);
+  }
+  .login-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 48px 40px;
+    width: 380px;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.4);
+  }
+  .login-logo {
+    text-align: center; margin-bottom: 32px;
+  }
+  .login-logo .icon {
+    width: 56px; height: 56px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 14px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 24px; margin-bottom: 16px;
+  }
+  .login-logo h1 { font-size: 22px; font-weight: 700; color: var(--text); }
+  .login-logo p { font-size: 13px; color: var(--text3); margin-top: 4px; }
+
+  .role-tabs { display: flex; gap: 8px; margin-bottom: 24px; }
+  .role-tab {
+    flex: 1; padding: 10px; border: 1px solid var(--border);
+    background: transparent; color: var(--text2); border-radius: 8px;
+    cursor: pointer; font-family: var(--sans); font-size: 14px; font-weight: 500;
+    transition: all 0.2s;
+  }
+  .role-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; font-size: 13px; color: var(--text2); margin-bottom: 6px; font-weight: 500; }
+  .form-group input {
+    width: 100%; padding: 10px 14px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); font-family: var(--sans); font-size: 15px;
+    outline: none; transition: border-color 0.2s;
+  }
+  .form-group input:focus { border-color: var(--accent); }
+
+  .btn-primary {
+    width: 100%; padding: 12px;
+    background: var(--accent); border: none; border-radius: 8px;
+    color: #fff; font-family: var(--sans); font-size: 15px; font-weight: 600;
+    cursor: pointer; transition: opacity 0.2s;
+  }
+  .btn-primary:hover { opacity: 0.88; }
+  .login-error { color: var(--red); font-size: 13px; margin-top: 10px; text-align: center; }
+
+  /* ── APP SHELL ── */
+  #app { display: none; min-height: 100vh; }
+  .topbar {
+    height: 56px; background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px; position: sticky; top: 0; z-index: 100;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 12px; }
+  .topbar-brand { font-size: 16px; font-weight: 700; color: var(--text); }
+  .topbar-badge {
+    font-size: 11px; padding: 2px 8px;
+    border-radius: 20px; font-weight: 600; font-family: var(--mono);
+  }
+  .badge-staff { background: rgba(59,130,246,0.15); color: var(--accent); }
+  .badge-admin { background: rgba(34,211,238,0.15); color: var(--accent2); }
+  .topbar-right { display: flex; align-items: center; gap: 8px; }
+  .btn-sm {
+    padding: 6px 14px; border-radius: 6px; font-family: var(--sans);
+    font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid var(--border);
+    background: transparent; color: var(--text2); transition: all 0.2s;
+  }
+  .btn-sm:hover { background: var(--surface2); color: var(--text); }
+
+  /* ── NAV ── */
+  .nav-tabs {
+    display: flex; gap: 4px; padding: 16px 24px 0;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .nav-tab {
+    padding: 8px 18px; border-radius: 8px 8px 0 0;
+    font-size: 14px; font-weight: 500; cursor: pointer;
+    color: var(--text3); background: transparent; border: none;
+    font-family: var(--sans); transition: all 0.15s;
+    border-bottom: 2px solid transparent;
+  }
+  .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .nav-tab:hover:not(.active) { color: var(--text2); }
+
+  /* ── CONTENT ── */
+  .content { padding: 24px; max-width: 1100px; margin: 0 auto; }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px;
+  }
+  .card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .card-title { font-size: 15px; font-weight: 600; color: var(--text); }
+  .card-sub { font-size: 13px; color: var(--text3); margin-top: 2px; }
+
+  /* ── FORM ELEMENTS ── */
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .field-row.three { grid-template-columns: 1fr 1fr 1fr; }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label { font-size: 12px; color: var(--text2); font-weight: 500; }
+  .field input, .field select {
+    padding: 9px 12px; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); font-family: var(--sans); font-size: 14px; outline: none;
+    transition: border-color 0.2s;
+  }
+  .field input:focus, .field select:focus { border-color: var(--accent); }
+  .field select option { background: var(--surface2); }
+
+  /* ── SEARCHABLE DROPDOWN ── */
+  .search-dropdown { position: relative; }
+  .search-dropdown input {
+    width: 100%; padding: 9px 12px; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); font-family: var(--sans); font-size: 14px; outline: none;
+  }
+  .search-dropdown input:focus { border-color: var(--accent); }
+  .dropdown-list {
+    position: absolute; top: 100%; left: 0; right: 0; z-index: 200;
+    background: var(--surface2); border: 1px solid var(--accent);
+    border-radius: 8px; max-height: 220px; overflow-y: auto;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4); display: none;
+    margin-top: 4px;
+  }
+  .dropdown-list.show { display: block; }
+  .dropdown-item {
+    padding: 9px 12px; cursor: pointer; font-size: 13px; color: var(--text2);
+    border-bottom: 1px solid var(--border); transition: background 0.15s;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .dropdown-item:last-child { border-bottom: none; }
+  .dropdown-item:hover { background: var(--border); color: var(--text); }
+  .dropdown-item .pts { font-family: var(--mono); font-size: 12px; color: var(--accent); }
+  .dropdown-item .type-badge {
+    font-size: 10px; padding: 1px 6px; border-radius: 4px;
+    background: rgba(59,130,246,0.1); color: var(--accent2);
+  }
+
+  /* ── JOB ITEMS TABLE ── */
+  .items-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+  .items-table th {
+    font-size: 11px; color: var(--text3); font-weight: 600;
+    padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border);
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .items-table td { padding: 10px 10px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .items-table tr:last-child td { border-bottom: none; }
+  .items-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .pts-cell { font-family: var(--mono); font-weight: 500; color: var(--accent2); }
+  .btn-icon {
+    background: none; border: none; cursor: pointer;
+    color: var(--text3); font-size: 16px; padding: 2px 6px;
+    border-radius: 4px; transition: all 0.15s;
+  }
+  .btn-icon:hover { color: var(--red); background: rgba(239,68,68,0.1); }
+
+  /* ── SCORE SUMMARY ── */
+  .score-box {
+    background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(34,211,238,0.05));
+    border: 1px solid rgba(59,130,246,0.3);
+    border-radius: 10px; padding: 16px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 16px;
+  }
+  .score-label { font-size: 13px; color: var(--text2); }
+  .score-value { font-size: 28px; font-weight: 700; font-family: var(--mono); color: var(--accent2); }
+  .score-detail { font-size: 12px; color: var(--text3); margin-top: 2px; }
+  .discount-tag {
+    background: rgba(245,158,11,0.15); color: var(--yellow);
+    font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 600;
+  }
+
+  /* ── BUTTONS ── */
+  .btn-success {
+    padding: 10px 20px; background: var(--green); border: none;
+    border-radius: 8px; color: #fff; font-family: var(--sans);
+    font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;
+  }
+  .btn-success:hover { opacity: 0.85; }
+  .btn-danger {
+    padding: 10px 20px; background: rgba(239,68,68,0.15);
+    border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 8px; color: var(--red); font-family: var(--sans);
+    font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  .btn-outline {
+    padding: 10px 20px; background: transparent;
+    border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text2); font-family: var(--sans);
+    font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s;
+  }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── JOB LIST ── */
+  .job-card {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px; margin-bottom: 10px;
+    cursor: pointer; transition: border-color 0.2s;
+  }
+  .job-card:hover { border-color: var(--accent); }
+  .job-card-header { display: flex; justify-content: space-between; align-items: flex-start; }
+  .job-no { font-family: var(--mono); font-size: 12px; color: var(--accent); font-weight: 500; }
+  .job-customer { font-size: 15px; font-weight: 600; margin-top: 2px; }
+  .job-meta { font-size: 12px; color: var(--text3); margin-top: 4px; }
+  .job-score-badge {
+    font-family: var(--mono); font-size: 18px; font-weight: 700;
+    color: var(--accent2); text-align: right;
+  }
+  .job-score-badge span { display: block; font-size: 10px; color: var(--text3); font-family: var(--sans); font-weight: 400; }
+  .job-team-tag {
+    display: inline-block; font-size: 11px; padding: 2px 8px;
+    background: rgba(59,130,246,0.1); color: var(--accent);
+    border-radius: 4px; margin-top: 6px;
+  }
+
+  /* ── STATS ── */
+  .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px;
+  }
+  .stat-label { font-size: 12px; color: var(--text3); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+  .stat-value { font-size: 28px; font-weight: 700; font-family: var(--mono); color: var(--text); margin-top: 4px; }
+  .stat-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
+
+  /* ── REPORT TABLE ── */
+  .report-table { width: 100%; border-collapse: collapse; }
+  .report-table th {
+    font-size: 11px; color: var(--text3); text-transform: uppercase;
+    letter-spacing: 0.05em; padding: 10px 12px; text-align: left;
+    border-bottom: 1px solid var(--border); font-weight: 600;
+  }
+  .report-table td { padding: 11px 12px; border-bottom: 1px solid var(--border); font-size: 14px; }
+  .report-table tbody tr:hover td { background: rgba(255,255,255,0.02); }
+  .report-table .num { font-family: var(--mono); }
+  .rank-1 { color: #ffd700; }
+  .rank-2 { color: #c0c0c0; }
+  .rank-3 { color: #cd7f32; }
+
+  /* ── SETTINGS ── */
+  .settings-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 0; border-bottom: 1px solid var(--border);
+  }
+  .settings-item:last-child { border-bottom: none; }
+  .settings-name { font-size: 14px; }
+  .settings-meta { font-size: 12px; color: var(--text3); margin-top: 2px; }
+  .settings-pts { font-family: var(--mono); font-size: 14px; color: var(--accent2); }
+  .settings-actions { display: flex; gap: 8px; }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 18px;
+    font-size: 14px; color: var(--text);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    display: none; z-index: 9999;
+    animation: slideUp 0.3s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(12px); opacity:0; } to { transform: translateY(0); opacity:1; } }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6); z-index: 500;
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 28px; width: 480px; max-width: 95vw;
+    max-height: 90vh; overflow-y: auto;
+  }
+  .modal h3 { font-size: 17px; font-weight: 600; margin-bottom: 20px; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+
+  /* ── FILTER BAR ── */
+  .filter-bar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .filter-bar input, .filter-bar select {
+    padding: 8px 12px; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); font-family: var(--sans); font-size: 13px; outline: none;
+  }
+  .filter-bar input:focus, .filter-bar select:focus { border-color: var(--accent); }
+  .filter-bar input { flex: 1; min-width: 160px; }
+
+  /* ── EMPTY STATE ── */
+  .empty {
+    text-align: center; padding: 48px 24px; color: var(--text3);
+  }
+  .empty-icon { font-size: 36px; margin-bottom: 12px; }
+  .empty p { font-size: 14px; }
+
+  /* ── SECTION TITLE ── */
+  .section-title {
+    font-size: 13px; font-weight: 600; color: var(--text3);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    margin-bottom: 12px; margin-top: 20px;
+  }
+
+  .flex-between { display: flex; justify-content: space-between; align-items: center; }
+  .gap-8 { gap: 8px; }
+  .flex { display: flex; }
+  .mt-12 { margin-top: 12px; }
+  .mt-16 { margin-top: 16px; }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="icon">❄️</div>
+      <h1>Air Tech Scoring</h1>
+      <p>ระบบบันทึกคะแนนช่าง</p>
+    </div>
+    <div class="role-tabs">
+      <button class="role-tab active" onclick="selectRole('staff')">👷 พนักงานออฟฟิศ</button>
+      <button class="role-tab" onclick="selectRole('admin')">🔐 Admin</button>
+    </div>
+    <div class="form-group">
+      <label>รหัสผ่าน</label>
+      <input type="password" id="loginPass" placeholder="กรอกรหัสผ่าน" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn-primary" onclick="doLogin()">เข้าสู่ระบบ</button>
+    <div class="login-error" id="loginError"></div>
+    <div style="font-size:12px;color:var(--text3);text-align:center;margin-top:16px;">
+      Staff: 1234 &nbsp;|&nbsp; Admin: 9999
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-left">
+      <span style="font-size:20px;">❄️</span>
+      <span class="topbar-brand">Air Tech Scoring</span>
+      <span class="topbar-badge" id="roleBadge"></span>
+    </div>
+    <div class="topbar-right">
+      <span style="font-size:13px;color:var(--text3);" id="topbarUser"></span>
+      <button class="btn-sm" onclick="logout()">ออกจากระบบ</button>
+    </div>
+  </div>
+
+  <div class="nav-tabs" id="navTabs"></div>
+
+  <div class="content">
+    <!-- STAFF: NEW JOB -->
+    <div class="page" id="pageNewJob">
+      <div class="flex-between mt-12" style="margin-bottom:16px;">
+        <div>
+          <div style="font-size:20px;font-weight:700;">สร้างใบงานใหม่</div>
+          <div style="font-size:13px;color:var(--text3);margin-top:2px;">บันทึกงานช่างประจำวัน</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">ข้อมูลงาน</div>
+            <div class="card-sub">กรอกรายละเอียดใบงาน</div>
+          </div>
+        </div>
+        <div class="field-row three">
+          <div class="field">
+            <label>วันที่</label>
+            <input type="date" id="jobDate">
+          </div>
+          <div class="field">
+            <label>ชื่องาน / เลขที่งาน (ไม่บังคับ)</label>
+            <input type="text" id="jobName" placeholder="เช่น งาน ABC Building">
+          </div>
+          <div class="field">
+            <label>ชื่อลูกค้า (ไม่บังคับ)</label>
+            <input type="text" id="jobCustomer" placeholder="เช่น คุณสมชาย">
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:12px;">
+          <label>ทีมช่าง</label>
+          <div class="search-dropdown">
+            <input type="text" id="teamSearch" placeholder="พิมพ์ค้นหาทีม..." autocomplete="off"
+              oninput="filterDropdown('teamSearch','teamList',teams,'name')"
+              onfocus="showDropdown('teamList')" onblur="hideDropdown('teamList',300)">
+            <input type="hidden" id="teamValue">
+            <div class="dropdown-list" id="teamList"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mt-16">
+        <div class="card-header">
+          <div>
+            <div class="card-title">เพิ่มรายการงาน</div>
+            <div class="card-sub">ค้นหาจากชื่องาน หรือรหัสรุ่น</div>
+          </div>
+        </div>
+        <div class="field-row" style="align-items:flex-end;">
+          <div class="field">
+            <label>ค้นหางาน</label>
+            <div class="search-dropdown">
+              <input type="text" id="serviceSearch" placeholder="พิมพ์ชื่องาน เช่น WALL TYPE, FXD..." autocomplete="off"
+                oninput="filterServiceDropdown()"
+                onfocus="showDropdown('serviceList')" onblur="hideDropdown('serviceList',300)">
+              <input type="hidden" id="serviceValue">
+              <input type="hidden" id="servicePoints">
+              <div class="dropdown-list" id="serviceList"></div>
+            </div>
+          </div>
+          <div class="field" style="max-width:100px;">
+            <label>จำนวน</label>
+            <input type="number" id="itemQty" value="1" min="1" max="99">
+          </div>
+          <div>
+            <button class="btn-success" onclick="addJobItem()" style="margin-top:20px;">+ เพิ่ม</button>
+          </div>
+        </div>
+
+        <div id="jobItemsWrap">
+          <div class="empty" id="emptyItems">
+            <div class="empty-icon">📋</div>
+            <p>ยังไม่มีรายการงาน<br>ค้นหาและเพิ่มงานด้านบน</p>
+          </div>
+          <table class="items-table" id="jobItemsTable" style="display:none;">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>รายการงาน</th>
+                <th>ประเภท</th>
+                <th>จำนวน</th>
+                <th>คะแนน/ชิ้น</th>
+                <th>รวม</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="jobItemsBody"></tbody>
+          </table>
+        </div>
+
+        <div class="score-box" id="scoreBox" style="display:none;">
+          <div>
+            <div class="score-label">คะแนนรวมทีม</div>
+            <div class="score-detail" id="scoreDetail"></div>
+          </div>
+          <div style="text-align:right;">
+            <div id="discountTag"></div>
+            <div class="score-value" id="scoreFinal">0</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:16px;justify-content:flex-end;">
+        <button class="btn-outline" onclick="resetNewJob()">ล้างข้อมูล</button>
+        <button class="btn-success" onclick="saveJob()">💾 บันทึกใบงาน</button>
+      </div>
+    </div>
+
+    <!-- STAFF: JOB LIST -->
+    <div class="page" id="pageJobList">
+      <div class="flex-between mt-12" style="margin-bottom:16px;">
+        <div>
+          <div style="font-size:20px;font-weight:700;">ใบงานทั้งหมด</div>
+          <div style="font-size:13px;color:var(--text3);margin-top:2px;">ดูและแก้ไขใบงาน</div>
+        </div>
+      </div>
+      <div class="filter-bar">
+        <input type="text" id="jobSearchFilter" placeholder="ค้นหาชื่อลูกค้า หรือชื่องาน..." oninput="renderJobList()">
+        <select id="jobTeamFilter" onchange="renderJobList()">
+          <option value="">ทุกทีม</option>
+        </select>
+        <input type="month" id="jobMonthFilter" oninput="renderJobList()">
+      </div>
+      <div id="jobListContainer"></div>
+    </div>
+
+    <!-- ADMIN: DASHBOARD -->
+    <div class="page" id="pageDashboard">
+      <div class="flex-between mt-12" style="margin-bottom:16px;">
+        <div>
+          <div style="font-size:20px;font-weight:700;">Dashboard</div>
+          <div style="font-size:13px;color:var(--text3);">สรุปคะแนนและผลงาน</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <select id="reportPeriod" onchange="renderDashboard()" style="padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--sans);font-size:13px;outline:none;">
+            <option value="daily">รายวัน</option>
+            <option value="monthly" selected>รายเดือน</option>
+            <option value="all">ทั้งหมด</option>
+          </select>
+          <input type="month" id="reportMonth" oninput="renderDashboard()" style="padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--sans);font-size:13px;outline:none;">
+          <button class="btn-sm" onclick="exportExcel()" style="background:rgba(16,185,129,0.1);border-color:rgba(16,185,129,0.3);color:var(--green);">📥 Export Excel</button>
+        </div>
+      </div>
+
+      <div class="stats-grid" id="statsGrid"></div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">🏆 อันดับทีม</div>
+          </div>
+          <table class="report-table" id="teamRankTable">
+            <thead><tr><th>#</th><th>ทีม</th><th>Jobs</th><th>คะแนนรวม</th></tr></thead>
+            <tbody id="teamRankBody"></tbody>
+          </table>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">📋 ใบงานล่าสุด</div>
+          </div>
+          <div id="recentJobsContainer"></div>
+        </div>
+      </div>
+
+      <div class="card mt-16">
+        <div class="card-header">
+          <div class="card-title">📊 รายละเอียดรายวัน</div>
+        </div>
+        <table class="report-table" id="dailyTable">
+          <thead><tr><th>วันที่</th><th>Jobs</th><th>คะแนนรวม</th><th>ทีม</th></tr></thead>
+          <tbody id="dailyBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ADMIN: SETTINGS -->
+    <div class="page" id="pageSettings">
+      <div style="font-size:20px;font-weight:700;margin-top:12px;margin-bottom:16px;">ตั้งค่าระบบ</div>
+
+      <!-- Teams -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-header">
+          <div class="card-title">👷 จัดการทีมช่าง</div>
+          <button class="btn-sm" onclick="showAddTeam()" style="color:var(--accent);border-color:var(--accent);">+ เพิ่มทีม</button>
+        </div>
+        <div id="teamsSettingsList"></div>
+      </div>
+
+      <!-- Services -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">🔧 จัดการรายการงาน</div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn-sm" onclick="showImportExcel()" style="color:var(--yellow);border-color:var(--yellow);">📥 Import Excel</button>
+            <button class="btn-sm" onclick="showAddService()" style="color:var(--accent);border-color:var(--accent);">+ เพิ่มงาน</button>
+          </div>
+        </div>
+        <div class="filter-bar">
+          <input type="text" id="serviceFilterSettings" placeholder="ค้นหารายการงาน..." oninput="renderServicesSettings()">
+          <select id="serviceTypeFilter" onchange="renderServicesSettings()" style="padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--sans);font-size:13px;outline:none;">
+            <option value="">ทุกประเภท</option>
+          </select>
+        </div>
+        <div id="servicesSettingsList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Job Detail / Edit -->
+<div class="modal-overlay" id="modalJobDetail">
+  <div class="modal" style="width:580px;">
+    <h3 id="modalJobTitle">รายละเอียดใบงาน</h3>
+    <div id="modalJobContent"></div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeModal('modalJobDetail')">ปิด</button>
+      <button class="btn-danger" id="btnDeleteJob" onclick="deleteCurrentJob()">🗑 ลบใบงาน</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Add Team -->
+<div class="modal-overlay" id="modalAddTeam">
+  <div class="modal">
+    <h3 id="modalTeamTitle">เพิ่มทีมช่าง</h3>
+    <div class="field">
+      <label>ชื่อทีม</label>
+      <input type="text" id="teamNameInput" placeholder="เช่น ชุดสมชาย">
+    </div>
+    <input type="hidden" id="teamEditId">
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeModal('modalAddTeam')">ยกเลิก</button>
+      <button class="btn-success" onclick="saveTeam()">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Add Service -->
+<div class="modal-overlay" id="modalAddService">
+  <div class="modal">
+    <h3 id="modalServiceTitle">เพิ่มรายการงาน</h3>
+    <div class="field" style="margin-bottom:12px;">
+      <label>ประเภทงาน</label>
+      <input type="text" id="svcTypeInput" placeholder="เช่น WALL TYPE, SERVICE">
+    </div>
+    <div class="field" style="margin-bottom:12px;">
+      <label>ชื่องาน / รหัสรุ่น</label>
+      <input type="text" id="svcNameInput" placeholder="เช่น RM09PV2S หรือ SPLIT TYPE 9,000 BTU">
+    </div>
+    <div class="field" style="margin-bottom:12px;">
+      <label>คะแนน</label>
+      <input type="number" id="svcPtsInput" placeholder="0" min="0">
+    </div>
+    <input type="hidden" id="svcEditId">
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeModal('modalAddService')">ยกเลิก</button>
+      <button class="btn-success" onclick="saveService()">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Import Excel Info -->
+<div class="modal-overlay" id="modalImport">
+  <div class="modal">
+    <h3>📥 Import Excel</h3>
+    <p style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:16px;">
+      อัปโหลดไฟล์ Excel ที่มี 3 คอลัมน์:<br>
+      <span style="font-family:var(--mono);color:var(--accent2);">TYPE | NAME | POINTS</span><br><br>
+      ระบบจะ <strong>merge</strong> กับข้อมูลเดิม (ไม่ลบของเก่า)<br>
+      ถ้ามีชื่องานซ้ำ จะอัปเดตคะแนนให้อัตโนมัติ
+    </p>
+    <div class="field" style="margin-bottom:16px;">
+      <label>เลือกไฟล์ Excel (.xlsx)</label>
+      <input type="file" id="importFile" accept=".xlsx,.xls" style="padding:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);width:100%;">
+    </div>
+    <div id="importStatus" style="font-size:13px;color:var(--green);margin-bottom:8px;"></div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeModal('modalImport')">ยกเลิก</button>
+      <button class="btn-success" onclick="processImport()">Import</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- LOADING OVERLAY -->
+<div id="loadingOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9998;align-items:center;justify-content:center;flex-direction:column;gap:16px;">
+  <div style="width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+  <div id="loadingMsg" style="font-size:14px;color:var(--text2);">กำลังโหลด...</div>
+</div>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ── DATA ──
+let currentRole = 'staff';
+let currentJobId = null;
+
+const PASSWORDS = { staff: '1234', admin: '9999' };
+
+// Default data
+let teams = [
+  { id: 't1', name: 'ชุดวุฒิศักดิ์' },
+  { id: 't2', name: 'ชุดกฤษณ์ชพล' },
+  { id: 't3', name: 'ชุดภานุรัตน์' },
+  { id: 't4', name: 'ชุดเสถียรพงศ์' },
+  { id: 't5', name: 'ชุดคเณศ' },
+  { id: 't6', name: 'ชุดภาณุวัฒน์' },
+];
+
+let services = [
+  // SERVICE
+  {id:'s1',type:'SERVICE - SPLIT TYPE',name:'9,000-24,000 BTU ย่อย',points:100},
+  {id:'s2',type:'SERVICE - SPLIT TYPE',name:'9,000-24,000 BTU ใหญ่',points:300},
+  {id:'s3',type:'SERVICE - SPLIT TYPE',name:'25,000-36,000 BTU ย่อย',points:150},
+  {id:'s4',type:'SERVICE - SPLIT TYPE',name:'25,000-36,000 BTU ใหญ่',points:350},
+  {id:'s5',type:'SERVICE - SPLIT TYPE',name:'38,000-48,000 BTU ย่อย',points:200},
+  {id:'s6',type:'SERVICE - SPLIT TYPE',name:'38,000-48,000 BTU ใหญ่',points:400},
+  {id:'s7',type:'SERVICE - SPLIT TYPE',name:'50,000-60,000 BTU ย่อย',points:250},
+  {id:'s8',type:'SERVICE - SPLIT TYPE',name:'50,000-60,000 BTU ใหญ่',points:450},
+  {id:'s9',type:'SERVICE - SPLIT TYPE',name:'65,000-90,000 BTU ย่อย',points:300},
+  {id:'s10',type:'SERVICE - SPLIT TYPE',name:'65,000-90,000 BTU ใหญ่',points:550},
+  {id:'s11',type:'SERVICE - SPLIT TYPE',name:'95,000-125,000 BTU ย่อย',points:350},
+  {id:'s12',type:'SERVICE - SPLIT TYPE',name:'95,000-125,000 BTU ใหญ่',points:650},
+  {id:'s13',type:'SERVICE - SPLIT TYPE',name:'140,000-240,000 BTU ย่อย',points:400},
+  {id:'s14',type:'SERVICE - SPLIT TYPE',name:'140,000-240,000 BTU ใหญ่',points:750},
+  {id:'s15',type:'SERVICE - SPLIT TYPE',name:'พัดลมดูดอากาศ ย่อย',points:100},
+  {id:'s16',type:'SERVICE - SPLIT TYPE',name:'พัดลมดูดอากาศ ใหญ่',points:200},
+  // VRV CDU
+  {id:'s17',type:'SERVICE - VRV CDU',name:'CDU RX5-RX20 ย่อย',points:200},
+  {id:'s18',type:'SERVICE - VRV CDU',name:'CDU RX5-RX20 ใหญ่',points:350},
+  // FCU VRV II CONCEALED
+  {id:'s19',type:'SERVICE - FCU VRV II (Concealed)',name:'FXD 20-80 ย่อย',points:100},
+  {id:'s20',type:'SERVICE - FCU VRV II (Concealed)',name:'FXD 20-80 ใหญ่',points:250},
+  {id:'s21',type:'SERVICE - FCU VRV II (Concealed)',name:'FXYD 20-80 ย่อย',points:100},
+  {id:'s22',type:'SERVICE - FCU VRV II (Concealed)',name:'FXYD 20-80 ใหญ่',points:250},
+  {id:'s23',type:'SERVICE - FCU VRV II (Concealed)',name:'FXS 20-80 ย่อย',points:100},
+  {id:'s24',type:'SERVICE - FCU VRV II (Concealed)',name:'FXS 20-80 ใหญ่',points:250},
+  {id:'s25',type:'SERVICE - FCU VRV II (Concealed)',name:'FXS 100-140 ย่อย',points:150},
+  {id:'s26',type:'SERVICE - FCU VRV II (Concealed)',name:'FXS 100-140 ใหญ่',points:300},
+  {id:'s27',type:'SERVICE - FCU VRV II (Concealed)',name:'FXYB 20-80 ย่อย',points:100},
+  {id:'s28',type:'SERVICE - FCU VRV II (Concealed)',name:'FXYB 20-80 ใหญ่',points:250},
+  {id:'s29',type:'SERVICE - FCU VRV II (Concealed)',name:'FXYB 100-140 ย่อย',points:150},
+  {id:'s30',type:'SERVICE - FCU VRV II (Concealed)',name:'FXYB 100-140 ใหญ่',points:300},
+  {id:'s31',type:'SERVICE - FCU VRV II (Concealed)',name:'FXM 20-80 ย่อย',points:100},
+  {id:'s32',type:'SERVICE - FCU VRV II (Concealed)',name:'FXM 20-80 ใหญ่',points:250},
+  {id:'s33',type:'SERVICE - FCU VRV II (Concealed)',name:'FXM 100-140 ย่อย',points:150},
+  {id:'s34',type:'SERVICE - FCU VRV II (Concealed)',name:'FXM 100-140 ใหญ่',points:300},
+  {id:'s35',type:'SERVICE - FCU VRV II (Concealed)',name:'FXM 200-250 ย่อย',points:250},
+  {id:'s36',type:'SERVICE - FCU VRV II (Concealed)',name:'FXM 200-250 ใหญ่',points:450},
+  // FCU VRV III-IV CONCEALED
+  {id:'s37',type:'SERVICE - FCU VRV III-IV (Concealed)',name:'FXDSQ 20-80 ย่อย',points:100},
+  {id:'s38',type:'SERVICE - FCU VRV III-IV (Concealed)',name:'FXDSQ 20-80 ใหญ่',points:250},
+  {id:'s39',type:'SERVICE - FCU VRV III-IV (Concealed)',name:'FXDQ 20-80 ย่อย',points:100},
+  {id:'s40',type:'SERVICE - FCU VRV III-IV (Concealed)',name:'FXDQ 20-80 ใหญ่',points:250},
+  {id:'s41',type:'SERVICE - FCU VRV III-IV (Concealed)',name:'FXDBQ 20-80 ย่อย',points:100},
+  {id:'s42',type:'SERVICE - FCU VRV III-IV (Concealed)',name:'FXDBQ 20-80 ใหญ่',points:250},
+  {id:'s43',type:'SERVICE - FCU VRV III-IV (Concealed)',name:'FXSQ 20-80 ย่อย',points:100},
+  {id:'s44',type:'SERVICE - FCU VRV III-IV (Concealed)',name:'FXSQ 20-80 ใหญ่',points:250},
+  {id:'s45',type:'SERVICE - FCU VRV III-IV (Concealed)',name:'FXSQ 100-140 ย่อย',points:150},
+  {id:'s46',type:'SERVICE - FCU VRV III-IV (Concealed)',name:'FXSQ 100-140 ใหญ่',points:300},
+  {id:'s47',type:'SERVICE - FCU VRV III-IV (Concealed)',name:'FXUQ 20-80 ย่อย',points:100},
+  {id:'s48',type:'SERVICE - FCU VRV III-IV (Concealed)',name:'FXUQ 20-80 ใหญ่',points:250},
+  {id:'s49',type:'SERVICE - FCU VRV III-IV (Concealed)',name:'FXUQ 100-140 ย่อย',points:150},
+  {id:'s50',type:'SERVICE - FCU VRV III-IV (Concealed)',name:'FXUQ 100-140 ใหญ่',points:300},
+  {id:'s51',type:'SERVICE - FCU VRV III-IV (Concealed)',name:'FXMQ 20-80 ย่อย',points:100},
+  {id:'s52',type:'SERVICE - FCU VRV III-IV (Concealed)',name:'FXMQ 20-80 ใหญ่',points:250},
+  {id:'s53',type:'SERVICE - FCU VRV III-IV (Concealed)',name:'FXMQ 100-140 ย่อย',points:150},
+  {id:'s54',type:'SERVICE - FCU VRV III-IV (Concealed)',name:'FXMQ 100-140 ใหญ่',points:300},
+  {id:'s55',type:'SERVICE - FCU VRV III-IV (Concealed)',name:'FXMQ 200-250 ย่อย',points:250},
+  {id:'s56',type:'SERVICE - FCU VRV III-IV (Concealed)',name:'FXMQ 200-250 ใหญ่',points:450},
+  {id:'s57',type:'SERVICE - FCU VRV III-IV (Concealed)',name:'FXHQ 20-80 ย่อย',points:100},
+  {id:'s58',type:'SERVICE - FCU VRV III-IV (Concealed)',name:'FXHQ 20-80 ใหญ่',points:250},
+  {id:'s59',type:'SERVICE - FCU VRV III-IV (Concealed)',name:'FXHQ 100-140 ย่อย',points:150},
+  {id:'s60',type:'SERVICE - FCU VRV III-IV (Concealed)',name:'FXHQ 100-140 ใหญ่',points:300},
+  // FCU VRV II CASSETTE
+  {id:'s61',type:'SERVICE - FCU VRV II (Cassette)',name:'FXC 20-80 ย่อย',points:100},
+  {id:'s62',type:'SERVICE - FCU VRV II (Cassette)',name:'FXC 20-80 ใหญ่',points:200},
+  {id:'s63',type:'SERVICE - FCU VRV II (Cassette)',name:'FXC 100-125 ย่อย',points:150},
+  {id:'s64',type:'SERVICE - FCU VRV II (Cassette)',name:'FXC 100-125 ใหญ่',points:250},
+  {id:'s65',type:'SERVICE - FCU VRV II (Cassette)',name:'FXF 20-80 ย่อย',points:100},
+  {id:'s66',type:'SERVICE - FCU VRV II (Cassette)',name:'FXF 20-80 ใหญ่',points:200},
+  {id:'s67',type:'SERVICE - FCU VRV II (Cassette)',name:'FXF 100-125 ย่อย',points:150},
+  {id:'s68',type:'SERVICE - FCU VRV II (Cassette)',name:'FXF 100-125 ใหญ่',points:250},
+  {id:'s69',type:'SERVICE - FCU VRV II (Cassette)',name:'FXK 20-80 ย่อย',points:100},
+  {id:'s70',type:'SERVICE - FCU VRV II (Cassette)',name:'FXK 20-80 ใหญ่',points:200},
+  {id:'s71',type:'SERVICE - FCU VRV II (Cassette)',name:'FXA 20-80 ย่อย',points:100},
+  {id:'s72',type:'SERVICE - FCU VRV II (Cassette)',name:'FXA 20-80 ใหญ่',points:200},
+  {id:'s73',type:'SERVICE - FCU VRV II (Cassette)',name:'FXA 100-125 ย่อย',points:150},
+  {id:'s74',type:'SERVICE - FCU VRV II (Cassette)',name:'FXA 100-125 ใหญ่',points:250},
+  // FCU VRV III-IV CASSETTE
+  {id:'s75',type:'SERVICE - FCU VRV III-IV (Cassette)',name:'FXFSQ 20-80 ย่อย',points:100},
+  {id:'s76',type:'SERVICE - FCU VRV III-IV (Cassette)',name:'FXFSQ 20-80 ใหญ่',points:200},
+  {id:'s77',type:'SERVICE - FCU VRV III-IV (Cassette)',name:'FXFSQ 100-140 ย่อย',points:150},
+  {id:'s78',type:'SERVICE - FCU VRV III-IV (Cassette)',name:'FXFSQ 100-140 ใหญ่',points:250},
+  {id:'s79',type:'SERVICE - FCU VRV III-IV (Cassette)',name:'FXFQ 20-80 ย่อย',points:100},
+  {id:'s80',type:'SERVICE - FCU VRV III-IV (Cassette)',name:'FXFQ 20-80 ใหญ่',points:200},
+  {id:'s81',type:'SERVICE - FCU VRV III-IV (Cassette)',name:'FXFQ 100-125 ย่อย',points:150},
+  {id:'s82',type:'SERVICE - FCU VRV III-IV (Cassette)',name:'FXFQ 100-125 ใหญ่',points:250},
+  {id:'s83',type:'SERVICE - FCU VRV III-IV (Cassette)',name:'FXZQ 20-80 ย่อย',points:100},
+  {id:'s84',type:'SERVICE - FCU VRV III-IV (Cassette)',name:'FXZQ 20-80 ใหญ่',points:200},
+  {id:'s85',type:'SERVICE - FCU VRV III-IV (Cassette)',name:'FXCQ 20-80 ย่อย',points:100},
+  {id:'s86',type:'SERVICE - FCU VRV III-IV (Cassette)',name:'FXCQ 20-80 ใหญ่',points:200},
+  {id:'s87',type:'SERVICE - FCU VRV III-IV (Cassette)',name:'FXCQ 100-125 ย่อย',points:150},
+  {id:'s88',type:'SERVICE - FCU VRV III-IV (Cassette)',name:'FXCQ 100-125 ใหญ่',points:250},
+  {id:'s89',type:'SERVICE - FCU VRV III-IV (Cassette)',name:'FXEQ 20-80 ย่อย',points:100},
+  {id:'s90',type:'SERVICE - FCU VRV III-IV (Cassette)',name:'FXEQ 20-80 ใหญ่',points:200},
+  {id:'s91',type:'SERVICE - FCU VRV III-IV (Cassette)',name:'FXKQ 20-80 ย่อย',points:100},
+  {id:'s92',type:'SERVICE - FCU VRV III-IV (Cassette)',name:'FXKQ 20-80 ใหญ่',points:200},
+  {id:'s93',type:'SERVICE - FCU VRV III-IV (Cassette)',name:'FXAQ 20-80 ย่อย',points:100},
+  {id:'s94',type:'SERVICE - FCU VRV III-IV (Cassette)',name:'FXAQ 20-80 ใหญ่',points:200},
+  {id:'s95',type:'SERVICE - FCU VRV III-IV (Cassette)',name:'FXLQ 20-80 ย่อย',points:100},
+  {id:'s96',type:'SERVICE - FCU VRV III-IV (Cassette)',name:'FXLQ 20-80 ใหญ่',points:200},
+  // INSTALL WALL TYPE
+  {id:'i1',type:'ติดตั้ง - WALL TYPE',name:'RM09PV2S/FTM09PV2S',points:1500},
+  {id:'i2',type:'ติดตั้ง - WALL TYPE',name:'RM13PV2S/FTM13PV2S',points:1500},
+  {id:'i3',type:'ติดตั้ง - WALL TYPE',name:'RM15PV2S/FTM15PV2S',points:1500},
+  {id:'i4',type:'ติดตั้ง - WALL TYPE',name:'RM18PV2S/FTM18PV2S',points:1800},
+  {id:'i5',type:'ติดตั้ง - WALL TYPE',name:'RKB09ZV2S/FTKB09ZV2S',points:1500},
+  {id:'i6',type:'ติดตั้ง - WALL TYPE',name:'RKB12ZV2S/FTKB12ZV2S',points:1500},
+  {id:'i7',type:'ติดตั้ง - WALL TYPE',name:'RKB15ZV2S/FTKB15ZV2S',points:1500},
+  {id:'i8',type:'ติดตั้ง - WALL TYPE',name:'RKB18ZV2S/FTKB18ZV2S',points:1800},
+  {id:'i9',type:'ติดตั้ง - WALL TYPE',name:'RKB24ZV2S/FTKB24ZV2S',points:1800},
+  {id:'i10',type:'ติดตั้ง - WALL TYPE',name:'RKQ09YV2S/FTKQ09YV2S',points:1500},
+  {id:'i11',type:'ติดตั้ง - WALL TYPE',name:'RKQ12YV2S/FTKQ12YV2S',points:1500},
+  {id:'i12',type:'ติดตั้ง - WALL TYPE',name:'RKQ15YV2S/FTKQ15YV2S',points:1500},
+  {id:'i13',type:'ติดตั้ง - WALL TYPE',name:'RKQ18YV2S/FTKQ18YV2S',points:1800},
+  {id:'i14',type:'ติดตั้ง - WALL TYPE',name:'RKQ24YV2S/FTKQ24YV2S',points:1800},
+  {id:'i15',type:'ติดตั้ง - WALL TYPE',name:'RKF09YV2S/FTKF09YV2S',points:1500},
+  {id:'i16',type:'ติดตั้ง - WALL TYPE',name:'RKF12YV2S/FTKF12YV2S',points:1500},
+  {id:'i17',type:'ติดตั้ง - WALL TYPE',name:'RKF15YV2S/FTKF15YV2S',points:1500},
+  {id:'i18',type:'ติดตั้ง - WALL TYPE',name:'RKF18YV2S/FTKF18YV2S',points:1800},
+  {id:'i19',type:'ติดตั้ง - WALL TYPE',name:'RKF24YV2S/FTKF24YV2S',points:1800},
+  {id:'i20',type:'ติดตั้ง - WALL TYPE',name:'RKC09ZV2S/FTKC09ZV2S',points:1500},
+  {id:'i21',type:'ติดตั้ง - WALL TYPE',name:'RKC12ZV2S/FTKC12ZV2S',points:1500},
+  {id:'i22',type:'ติดตั้ง - WALL TYPE',name:'RKC15ZV2S/FTKC15ZV2S',points:1500},
+  {id:'i23',type:'ติดตั้ง - WALL TYPE',name:'RKC18ZV2S/FTKC18ZV2S',points:1800},
+  {id:'i24',type:'ติดตั้ง - WALL TYPE',name:'RKC24ZV2S/FTKC24ZV2S',points:1800},
+  {id:'i25',type:'ติดตั้ง - WALL TYPE',name:'RKM09YV2S/FTKM09YV2S',points:1500},
+  {id:'i26',type:'ติดตั้ง - WALL TYPE',name:'RKM12YV2S/FTKM12YV2S',points:1500},
+  {id:'i27',type:'ติดตั้ง - WALL TYPE',name:'RKM15YV2S/FTKM15YV2S',points:1500},
+  {id:'i28',type:'ติดตั้ง - WALL TYPE',name:'RKM18YV2S/FTKM18YV2S',points:1800},
+  {id:'i29',type:'ติดตั้ง - WALL TYPE',name:'RKM24YV2S/FTKM24YV2S',points:1800},
+  {id:'i30',type:'ติดตั้ง - WALL TYPE',name:'RKZ09YV2S/FTKZ09YV2S',points:1500},
+  {id:'i31',type:'ติดตั้ง - WALL TYPE',name:'RKZ12YV2S/FTKZ12YV2S',points:1500},
+  {id:'i32',type:'ติดตั้ง - WALL TYPE',name:'RKZ15YV2S/FTKZ15YV2S',points:1500},
+  {id:'i33',type:'ติดตั้ง - WALL TYPE',name:'RKZ18YV2S/FTKZ18YV2S',points:1800},
+  {id:'i34',type:'ติดตั้ง - WALL TYPE',name:'RKZ24YV2S/FTKZ24YV2S',points:1800},
+  {id:'i35',type:'ติดตั้ง - WALL TYPE',name:'RKV30XV2S/FAVF30XV2S',points:2500},
+  {id:'i36',type:'ติดตั้ง - WALL TYPE',name:'RKV36XV2S/FAVF36XV2S',points:2500},
+  // AIR CREATOR
+  {id:'i37',type:'ติดตั้ง - AIR CREATOR',name:'MRKC09AV2SK/MTKC09AV2SK',points:1500},
+  {id:'i38',type:'ติดตั้ง - AIR CREATOR',name:'MRKC09AV2SW/MTKC09AV2SW',points:1500},
+  {id:'i39',type:'ติดตั้ง - AIR CREATOR',name:'MRKC12AV2SK/MTKC12AV2SK',points:1500},
+  {id:'i40',type:'ติดตั้ง - AIR CREATOR',name:'MRKC12AV2SW/MTKC12AV2SW',points:1500},
+  // CASSETTE
+  {id:'i41',type:'ติดตั้ง - CASSETTE TYPE',name:'RC18AV1S/FCC18AV1S',points:2200},
+  {id:'i42',type:'ติดตั้ง - CASSETTE TYPE',name:'RC24AV1S/FCC24AV1S',points:2200},
+  {id:'i43',type:'ติดตั้ง - CASSETTE TYPE',name:'RC30AV1S/FCC30AV1S',points:2800},
+  {id:'i44',type:'ติดตั้ง - CASSETTE TYPE',name:'RC36AV1S/FCC36AV1S',points:2800},
+  {id:'i45',type:'ติดตั้ง - CASSETTE TYPE',name:'RC42AY1S/FCC42AV1S',points:3400},
+  {id:'i46',type:'ติดตั้ง - CASSETTE TYPE',name:'RC46AY1S/FCC46AV1S',points:3400},
+  {id:'i47',type:'ติดตั้ง - CASSETTE TYPE',name:'RZFC13EV2S/FCFC13EV2S',points:1900},
+  {id:'i48',type:'ติดตั้ง - CASSETTE TYPE',name:'RZFC18EV2S/FCFC18EV2S',points:2200},
+  {id:'i49',type:'ติดตั้ง - CASSETTE TYPE',name:'RZFC24EV2S/FCFC24EV2S',points:2200},
+  {id:'i50',type:'ติดตั้ง - CASSETTE TYPE',name:'RZFC30EV2S/FCFC30EV2S 220V',points:2800},
+  {id:'i51',type:'ติดตั้ง - CASSETTE TYPE',name:'RZFC30EY2S/FCFC30EV2S 380V',points:2800},
+  {id:'i52',type:'ติดตั้ง - CASSETTE TYPE',name:'RZFC36EV2S/FCFC36EV2S 220V',points:2800},
+  {id:'i53',type:'ติดตั้ง - CASSETTE TYPE',name:'RZFC36EY2S/FCFC36EV2S 380V',points:2800},
+  {id:'i54',type:'ติดตั้ง - CASSETTE TYPE',name:'RZFC42EY2S/FCFC42EV2S',points:3400},
+  {id:'i55',type:'ติดตั้ง - CASSETTE TYPE',name:'RZFC48EY2S/FCFC48EV2S',points:3400},
+  // CEILING
+  {id:'i56',type:'ติดตั้ง - CEILING TYPE',name:'RNQ24MV2S/FHNQ24MV2S',points:1800},
+  {id:'i57',type:'ติดตั้ง - CEILING TYPE',name:'RNQ30MAV2S/FHNQ30MAV2S 220V',points:2500},
+  {id:'i58',type:'ติดตั้ง - CEILING TYPE',name:'RNQ36MAV2S/FHNQ36MAV2S 220V',points:2500},
+  {id:'i59',type:'ติดตั้ง - CEILING TYPE',name:'RNQ42MY2S/FHNQ42MV2S',points:3500},
+  {id:'i60',type:'ติดตั้ง - CEILING TYPE',name:'RNQ48MY2S/FHNQ48MV2S',points:3500},
+  // DUCT
+  {id:'i61',type:'ติดตั้ง - DUCT TYPE',name:'RZFC13EV2S/FDBF13EV2S',points:2000},
+  {id:'i62',type:'ติดตั้ง - DUCT TYPE',name:'RZFC18EV2S/FDBF18EV2S',points:2400},
+  {id:'i63',type:'ติดตั้ง - DUCT TYPE',name:'RZFC24EV2S/FDBF24EV2S',points:2400},
+  {id:'i64',type:'ติดตั้ง - DUCT TYPE',name:'RZFC30EV2S/FBFC30EV2S 220V',points:3300},
+  {id:'i65',type:'ติดตั้ง - DUCT TYPE',name:'RZFC36EV2S/FBFC36EV2S 220V',points:3300},
+  {id:'i66',type:'ติดตั้ง - DUCT TYPE',name:'RZFC42EV2S/FBFC42EV2S 220V',points:4200},
+  {id:'i67',type:'ติดตั้ง - DUCT TYPE',name:'RZFC48EV2S/FBFC48EV2S 220V',points:4200},
+  // VRV INSTALL
+  {id:'i68',type:'ติดตั้ง - VRV CDU',name:'RXMQ/RXQ 5',points:2500},
+  {id:'i69',type:'ติดตั้ง - VRV CDU',name:'RXMQ/RXQ 10-20',points:3000},
+  {id:'i70',type:'ติดตั้ง - VRV FCU',name:'FCU 25-63',points:1000},
+  {id:'i71',type:'ติดตั้ง - VRV FCU',name:'FCU 80-140',points:1500},
+  {id:'i72',type:'ติดตั้ง - VRV FCU',name:'FCU 200-250',points:1500},
+];
+
+let jobs = [];
+let currentItems = []; // items in new job form
+
+// ── GOOGLE SHEETS BACKEND ──
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxFQcyWi7KBa60_8o_-21BUw-AeCg3FYJowHlnYel91UpDEYkYbp68AKz89fxWB6yOX2A/exec';
+
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
+
+async function api(params) {
+  const url = GAS_URL + '?' + new URLSearchParams(params).toString();
+  const res = await fetch(url);
+  const json = await res.json();
+  if(!json.ok) throw new Error(json.error || 'API Error');
+  return json.data;
+}
+
+function showLoading(msg='กำลังโหลด...') {
+  document.getElementById('loadingOverlay').style.display='flex';
+  document.getElementById('loadingMsg').textContent = msg;
+}
+function hideLoading() {
+  document.getElementById('loadingOverlay').style.display='none';
+}
+
+async function loadData() {
+  showLoading('กำลังโหลดข้อมูล...');
+  try {
+    const data = await api({ action: 'getAll' });
+    if(data.teams && data.teams.length > 0) teams = data.teams;
+    if(data.services && data.services.length > 0) services = data.services;
+    if(data.jobs) jobs = data.jobs.reverse();
+  } catch(e) {
+    showToast('⚠️ โหลดข้อมูลไม่สำเร็จ: ' + e.message);
+  }
+  hideLoading();
+}
+
+async function saveData() { /* data saved per-action via API */ }
+
+async function apiSaveJob(job) {
+  showLoading('กำลังบันทึก...');
+  try {
+    await api({ action: 'saveJob', data: JSON.stringify(job) });
+    showToast('✅ บันทึกใบงานสำเร็จ');
+  } catch(e) { showToast('⚠️ บันทึกไม่สำเร็จ: ' + e.message); }
+  hideLoading();
+}
+
+async function apiDeleteJob(id) {
+  showLoading('กำลังลบ...');
+  try { await api({ action: 'deleteJob', id }); }
+  catch(e) { showToast('⚠️ ลบไม่สำเร็จ: ' + e.message); }
+  hideLoading();
+}
+
+async function apiSaveTeam(team) {
+  showLoading('กำลังบันทึก...');
+  try { await api({ action: 'saveTeam', data: JSON.stringify(team) }); }
+  catch(e) { showToast('⚠️ บันทึกไม่สำเร็จ: ' + e.message); }
+  hideLoading();
+}
+
+async function apiDeleteTeam(id) {
+  showLoading('กำลังลบ...');
+  try { await api({ action: 'deleteTeam', id }); }
+  catch(e) { showToast('⚠️ ลบไม่สำเร็จ: ' + e.message); }
+  hideLoading();
+}
+
+async function apiSaveService(svc) {
+  showLoading('กำลังบันทึก...');
+  try { await api({ action: 'saveService', data: JSON.stringify(svc) }); }
+  catch(e) { showToast('⚠️ บันทึกไม่สำเร็จ: ' + e.message); }
+  hideLoading();
+}
+
+async function apiDeleteService(id) {
+  showLoading('กำลังลบ...');
+  try { await api({ action: 'deleteService', id }); }
+  catch(e) { showToast('⚠️ ลบไม่สำเร็จ: ' + e.message); }
+  hideLoading();
+}
+
+async function apiImportServices(items) {
+  showLoading('กำลัง Import...');
+  try {
+    const res = await api({ action: 'importServices', data: JSON.stringify(items) });
+    showToast(`📥 Import สำเร็จ: +${res.added} / อัปเดต ${res.updated}`);
+  } catch(e) { showToast('⚠️ Import ไม่สำเร็จ: ' + e.message); }
+  hideLoading();
+}
+
+// ── LOGIN ──
+function selectRole(r) {
+  currentRole = r;
+  document.querySelectorAll('.role-tab').forEach((t,i)=>t.classList.toggle('active',i===(r==='staff'?0:1)));
+}
+function doLogin() {
+  const pass = document.getElementById('loginPass').value;
+  if(pass === PASSWORDS[currentRole]) {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    initApp();
+  } else {
+    document.getElementById('loginError').textContent = 'รหัสผ่านไม่ถูกต้อง';
+  }
+}
+function logout() {
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('loginPass').value = '';
+  document.getElementById('loginError').textContent = '';
+}
+
+// ── INIT ──
+function initApp() {
+  const badge = document.getElementById('roleBadge');
+  const user = document.getElementById('topbarUser');
+  if(currentRole === 'staff') {
+    badge.textContent = 'STAFF'; badge.className = 'topbar-badge badge-staff';
+    user.textContent = 'พนักงานออฟฟิศ';
+  } else {
+    badge.textContent = 'ADMIN'; badge.className = 'topbar-badge badge-admin';
+    user.textContent = 'Administrator';
+  }
+  buildNav();
+  showPage(currentRole === 'staff' ? 'pageNewJob' : 'pageDashboard');
+  initNewJobForm();
+}
+
+function buildNav() {
+  const nav = document.getElementById('navTabs');
+  const staffTabs = [
+    {id:'pageNewJob', label:'+ สร้างใบงาน'},
+    {id:'pageJobList', label:'📋 ใบงานทั้งหมด'},
+  ];
+  const adminTabs = [
+    {id:'pageDashboard', label:'📊 Dashboard'},
+    {id:'pageJobList', label:'📋 ใบงาน'},
+    {id:'pageSettings', label:'⚙️ ตั้งค่า'},
+  ];
+  const tabs = currentRole === 'staff' ? staffTabs : adminTabs;
+  nav.innerHTML = tabs.map(t=>`<button class="nav-tab" id="nav_${t.id}" onclick="showPage('${t.id}')">${t.label}</button>`).join('');
+}
+
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  const navBtn = document.getElementById('nav_'+id);
+  if(navBtn) navBtn.classList.add('active');
+  if(id==='pageJobList') renderJobList();
+  if(id==='pageDashboard') renderDashboard();
+  if(id==='pageSettings') renderSettings();
+}
+
+// ── NEW JOB FORM ──
+function initNewJobForm() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('jobDate').value = today;
+  currentItems = [];
+  renderJobItems();
+  initTeamDropdown();
+  // set current month for report
+  document.getElementById('reportMonth').value = today.slice(0,7);
+}
+
+function initTeamDropdown() {
+  const list = document.getElementById('teamList');
+  list.innerHTML = teams.map(t=>`<div class="dropdown-item" onmousedown="selectTeam('${t.id}','${t.name}')">${t.name}</div>`).join('');
+  // also update job filter
+  const tf = document.getElementById('jobTeamFilter');
+  if(tf) tf.innerHTML = '<option value="">ทุกทีม</option>' + teams.map(t=>`<option value="${t.id}">${t.name}</option>`).join('');
+}
+
+// ── SEARCHABLE DROPDOWN ──
+function filterDropdown(inputId, listId, data, key) {
+  const q = document.getElementById(inputId).value.toLowerCase();
+  const list = document.getElementById(listId);
+  const filtered = data.filter(d=>d[key].toLowerCase().includes(q));
+  if(listId === 'teamList') {
+    list.innerHTML = filtered.map(t=>`<div class="dropdown-item" onmousedown="selectTeam('${t.id}','${t.name}')">${t.name}</div>`).join('');
+  }
+  showDropdown(listId);
+}
+
+function filterServiceDropdown() {
+  const q = document.getElementById('serviceSearch').value.toLowerCase();
+  const list = document.getElementById('serviceList');
+  if(!q) { list.innerHTML=''; list.classList.remove('show'); return; }
+  const filtered = services.filter(s=>
+    s.name.toLowerCase().includes(q) || s.type.toLowerCase().includes(q)
+  ).slice(0,30);
+  list.innerHTML = filtered.map(s=>`
+    <div class="dropdown-item" onmousedown="selectService('${s.id}','${s.name}',${s.points},'${s.type}')">
+      <div>
+        <span class="type-badge">${s.type}</span>
+        <span style="margin-left:6px;">${s.name}</span>
+      </div>
+      <span class="pts">${s.points} pts</span>
+    </div>`).join('');
+  list.classList.add('show');
+}
+
+function selectTeam(id, name) {
+  document.getElementById('teamSearch').value = name;
+  document.getElementById('teamValue').value = id;
+  document.getElementById('teamList').classList.remove('show');
+}
+
+function selectService(id, name, pts, type) {
+  document.getElementById('serviceSearch').value = `[${type}] ${name}`;
+  document.getElementById('serviceValue').value = id;
+  document.getElementById('servicePoints').value = pts;
+  document.getElementById('serviceList').classList.remove('show');
+}
+
+function showDropdown(id) { document.getElementById(id).classList.add('show'); }
+function hideDropdown(id, delay=0) {
+  setTimeout(()=>document.getElementById(id).classList.remove('show'), delay);
+}
+
+// ── JOB ITEMS ──
+function addJobItem() {
+  const svcId = document.getElementById('serviceValue').value;
+  const pts = parseInt(document.getElementById('servicePoints').value)||0;
+  const qty = parseInt(document.getElementById('itemQty').value)||1;
+  const svc = services.find(s=>s.id===svcId);
+  if(!svc) { showToast('⚠️ กรุณาเลือกรายการงานก่อน'); return; }
+  currentItems.push({ id: genId(), svcId: svc.id, type: svc.type, name: svc.name, pts, qty });
+  document.getElementById('serviceSearch').value = '';
+  document.getElementById('serviceValue').value = '';
+  document.getElementById('servicePoints').value = '';
+  document.getElementById('itemQty').value = 1;
+  renderJobItems();
+}
+
+function removeJobItem(id) {
+  currentItems = currentItems.filter(i=>i.id!==id);
+  renderJobItems();
+}
+
+function calcScore() {
+  // count service items for discount
+  const serviceItems = currentItems.filter(i=>i.type.startsWith('SERVICE'));
+  const totalServiceUnits = serviceItems.reduce((a,b)=>a+b.qty,0);
+  let discount = 0;
+  if(totalServiceUnits >= 11) discount = 0.15;
+  else if(totalServiceUnits >= 6) discount = 0.10;
+  else if(totalServiceUnits >= 3) discount = 0.05;
+
+  let rawTotal = currentItems.reduce((a,b)=>a+(b.pts*b.qty),0);
+  let serviceRaw = serviceItems.reduce((a,b)=>a+(b.pts*b.qty),0);
+  let nonServiceRaw = rawTotal - serviceRaw;
+  let finalTotal = nonServiceRaw + Math.round(serviceRaw * (1-discount));
+  return { rawTotal, finalTotal, discount, totalServiceUnits };
+}
+
+function renderJobItems() {
+  const empty = document.getElementById('emptyItems');
+  const table = document.getElementById('jobItemsTable');
+  const scoreBox = document.getElementById('scoreBox');
+  if(currentItems.length === 0) {
+    empty.style.display='block'; table.style.display='none'; scoreBox.style.display='none'; return;
+  }
+  empty.style.display='none'; table.style.display='table'; scoreBox.style.display='flex';
+  const { rawTotal, finalTotal, discount, totalServiceUnits } = calcScore();
+  document.getElementById('jobItemsBody').innerHTML = currentItems.map((item,i)=>`
+    <tr>
+      <td style="color:var(--text3);">${i+1}</td>
+      <td>${item.name}</td>
+      <td><span class="type-badge" style="font-size:11px;padding:2px 6px;border-radius:4px;background:rgba(59,130,246,0.1);color:var(--accent2);">${item.type}</span></td>
+      <td>${item.qty}</td>
+      <td class="pts-cell">${item.pts.toLocaleString()}</td>
+      <td class="pts-cell">${(item.pts*item.qty).toLocaleString()}</td>
+      <td><button class="btn-icon" onclick="removeJobItem('${item.id}')">✕</button></td>
+    </tr>`).join('');
+
+  document.getElementById('scoreDetail').textContent =
+    discount > 0 ? `Service ${totalServiceUnits} ชุด (ลด ${discount*100}%) | รวมก่อนลด ${rawTotal.toLocaleString()}` : `รายการทั้งหมด ${currentItems.length} รายการ`;
+  document.getElementById('discountTag').innerHTML =
+    discount > 0 ? `<span class="discount-tag">ลด ${discount*100}%</span>` : '';
+  document.getElementById('scoreFinal').textContent = finalTotal.toLocaleString();
+}
+
+// ── SAVE JOB ──
+async function saveJob() {
+  const date = document.getElementById('jobDate').value;
+  const teamId = document.getElementById('teamValue').value;
+  const teamName = document.getElementById('teamSearch').value;
+  if(!date) { showToast('⚠️ กรุณาเลือกวันที่'); return; }
+  if(!teamId) { showToast('⚠️ กรุณาเลือกทีมช่าง'); return; }
+  if(currentItems.length === 0) { showToast('⚠️ กรุณาเพิ่มรายการงานอย่างน้อย 1 รายการ'); return; }
+  const { finalTotal, rawTotal, discount } = calcScore();
+  const job = {
+    id: genId(),
+    jobNo: 'J' + String(jobs.length+1).padStart(4,'0'),
+    date, teamId, teamName,
+    name: document.getElementById('jobName').value,
+    customer: document.getElementById('jobCustomer').value,
+    items: [...currentItems],
+    rawScore: rawTotal,
+    finalScore: finalTotal,
+    discount,
+    createdAt: new Date().toISOString()
+  };
+  await apiSaveJob(job);
+  jobs.unshift(job);
+  resetNewJob();
+}
+
+function resetNewJob() {
+  currentItems = [];
+  document.getElementById('jobName').value = '';
+  document.getElementById('jobCustomer').value = '';
+  document.getElementById('teamSearch').value = '';
+  document.getElementById('teamValue').value = '';
+  document.getElementById('serviceSearch').value = '';
+  document.getElementById('serviceValue').value = '';
+  document.getElementById('servicePoints').value = '';
+  document.getElementById('itemQty').value = 1;
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('jobDate').value = today;
+  renderJobItems();
+}
+
+// ── JOB LIST ──
+function renderJobList() {
+  const q = (document.getElementById('jobSearchFilter')?.value||'').toLowerCase();
+  const teamF = document.getElementById('jobTeamFilter')?.value||'';
+  const monthF = document.getElementById('jobMonthFilter')?.value||'';
+  let filtered = jobs.filter(j=>{
+    const matchQ = !q || (j.customer||'').toLowerCase().includes(q) || (j.name||'').toLowerCase().includes(q) || j.jobNo.includes(q);
+    const matchT = !teamF || j.teamId===teamF;
+    const matchM = !monthF || j.date.startsWith(monthF);
+    return matchQ && matchT && matchM;
+  });
+  const container = document.getElementById('jobListContainer');
+  if(filtered.length===0) {
+    container.innerHTML=`<div class="empty"><div class="empty-icon">📭</div><p>ไม่พบใบงาน</p></div>`; return;
+  }
+  container.innerHTML = filtered.map(j=>`
+    <div class="job-card" onclick="showJobDetail('${j.id}')">
+      <div class="job-card-header">
+        <div>
+          <div class="job-no">${j.jobNo} &nbsp;·&nbsp; ${j.date}</div>
+          <div class="job-customer">${j.customer||'ไม่ระบุลูกค้า'}</div>
+          <div class="job-meta">${j.name||'ไม่ระบุชื่องาน'} &nbsp;·&nbsp; ${j.items.length} รายการ</div>
+          <span class="job-team-tag">👷 ${j.teamName}</span>
+        </div>
+        <div class="job-score-badge">
+          ${j.finalScore.toLocaleString()}
+          <span>คะแนน</span>
+          ${j.discount>0?`<span style="color:var(--yellow);font-size:10px;">ลด ${j.discount*100}%</span>`:''}
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+// ── JOB DETAIL MODAL ──
+function showJobDetail(id) {
+  const job = jobs.find(j=>j.id===id);
+  if(!job) return;
+  currentJobId = id;
+  document.getElementById('modalJobTitle').textContent = `${job.jobNo} — ${job.customer||'ไม่ระบุลูกค้า'}`;
+  document.getElementById('modalJobContent').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;font-size:13px;">
+      <div><span style="color:var(--text3);">วันที่:</span> ${job.date}</div>
+      <div><span style="color:var(--text3);">ทีม:</span> ${job.teamName}</div>
+      <div><span style="color:var(--text3);">ลูกค้า:</span> ${job.customer||'-'}</div>
+      <div><span style="color:var(--text3);">ชื่องาน:</span> ${job.name||'-'}</div>
+    </div>
+    <table class="items-table" style="margin-bottom:12px;">
+      <thead><tr><th>#</th><th>รายการ</th><th>จำนวน</th><th>คะแนน/ชิ้น</th><th>รวม</th></tr></thead>
+      <tbody>
+        ${job.items.map((it,i)=>`<tr>
+          <td style="color:var(--text3)">${i+1}</td>
+          <td><span style="font-size:11px;color:var(--accent2)">${it.type}</span><br>${it.name}</td>
+          <td>${it.qty}</td>
+          <td class="pts-cell">${it.pts.toLocaleString()}</td>
+          <td class="pts-cell">${(it.pts*it.qty).toLocaleString()}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+    <div class="score-box">
+      <div>
+        <div class="score-label">คะแนนรวมทีม</div>
+        ${job.discount>0?`<div style="font-size:12px;color:var(--text3)">ก่อนลด: ${job.rawScore.toLocaleString()} | ลด ${job.discount*100}%</div>`:''}
+      </div>
+      <div class="score-value">${job.finalScore.toLocaleString()}</div>
+    </div>`;
+  document.getElementById('modalJobDetail').classList.add('show');
+}
+
+async function deleteCurrentJob() {
+  if(!confirm('ต้องการลบใบงานนี้?')) return;
+  await apiDeleteJob(currentJobId);
+  jobs = jobs.filter(j=>j.id!==currentJobId);
+  closeModal('modalJobDetail');
+  renderJobList();
+  showToast('🗑 ลบใบงานแล้ว');
+}
+
+// ── DASHBOARD ──
+function renderDashboard() {
+  const period = document.getElementById('reportPeriod').value;
+  const month = document.getElementById('reportMonth').value;
+  let filtered = jobs;
+  if(period==='monthly' && month) filtered = jobs.filter(j=>j.date.startsWith(month));
+  if(period==='daily') {
+    const today = new Date().toISOString().split('T')[0];
+    filtered = jobs.filter(j=>j.date===today);
+  }
+  const totalScore = filtered.reduce((a,b)=>a+b.finalScore,0);
+  const totalJobs = filtered.length;
+  const avgScore = totalJobs ? Math.round(totalScore/totalJobs) : 0;
+  document.getElementById('statsGrid').innerHTML = `
+    <div class="stat-card"><div class="stat-label">ใบงานทั้งหมด</div><div class="stat-value">${totalJobs}</div><div class="stat-sub">รายการ</div></div>
+    <div class="stat-card"><div class="stat-label">คะแนนรวม</div><div class="stat-value">${totalScore.toLocaleString()}</div><div class="stat-sub">คะแนน</div></div>
+    <div class="stat-card"><div class="stat-label">คะแนนเฉลี่ย/Job</div><div class="stat-value">${avgScore.toLocaleString()}</div><div class="stat-sub">คะแนน/ใบงาน</div></div>`;
+
+  // Team rank
+  const teamScores = {};
+  filtered.forEach(j=>{
+    if(!teamScores[j.teamId]) teamScores[j.teamId]={name:j.teamName,score:0,jobs:0};
+    teamScores[j.teamId].score += j.finalScore;
+    teamScores[j.teamId].jobs++;
+  });
+  const ranked = Object.values(teamScores).sort((a,b)=>b.score-a.score);
+  const rankColors = ['rank-1','rank-2','rank-3'];
+  document.getElementById('teamRankBody').innerHTML = ranked.length ? ranked.map((t,i)=>`
+    <tr><td class="num ${rankColors[i]||''}">${i+1}</td><td>${t.name}</td>
+    <td class="num">${t.jobs}</td><td class="num" style="color:var(--accent2)">${t.score.toLocaleString()}</td></tr>`).join('')
+    : `<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:20px;">ไม่มีข้อมูล</td></tr>`;
+
+  // Recent jobs
+  const recent = filtered.slice(0,5);
+  document.getElementById('recentJobsContainer').innerHTML = recent.length ? recent.map(j=>`
+    <div class="settings-item">
+      <div><div class="settings-name">${j.customer||j.name||'ไม่ระบุ'}</div>
+      <div class="settings-meta">${j.date} · ${j.teamName}</div></div>
+      <div style="font-family:var(--mono);color:var(--accent2);">${j.finalScore.toLocaleString()}</div>
+    </div>`).join('') : `<div class="empty"><p>ไม่มีข้อมูล</p></div>`;
+
+  // Daily breakdown
+  const byDay = {};
+  filtered.forEach(j=>{
+    if(!byDay[j.date]) byDay[j.date]={score:0,jobs:0,teams:new Set()};
+    byDay[j.date].score+=j.finalScore; byDay[j.date].jobs++;
+    byDay[j.date].teams.add(j.teamName);
+  });
+  const days = Object.keys(byDay).sort().reverse();
+  document.getElementById('dailyBody').innerHTML = days.length ? days.map(d=>`
+    <tr><td>${d}</td><td class="num">${byDay[d].jobs}</td>
+    <td class="num" style="color:var(--accent2)">${byDay[d].score.toLocaleString()}</td>
+    <td style="font-size:12px;color:var(--text3)">${[...byDay[d].teams].join(', ')}</td></tr>`).join('')
+    : `<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:20px;">ไม่มีข้อมูล</td></tr>`;
+}
+
+// ── EXPORT EXCEL ──
+function exportExcel() {
+  const period = document.getElementById('reportPeriod').value;
+  const month = document.getElementById('reportMonth').value;
+  let filtered = jobs;
+  if(period==='monthly'&&month) filtered=jobs.filter(j=>j.date.startsWith(month));
+  if(period==='daily') { const t=new Date().toISOString().split('T')[0]; filtered=jobs.filter(j=>j.date===t); }
+
+  const wb = XLSX.utils.book_new();
+  // Jobs sheet
+  const jData = [['เลขที่','วันที่','ลูกค้า','ชื่องาน','ทีม','รายการ','คะแนนก่อนลด','ส่วนลด%','คะแนนสุทธิ']];
+  filtered.forEach(j=>jData.push([j.jobNo,j.date,j.customer||'',j.name||'',j.teamName,j.items.length,j.rawScore,j.discount*100,j.finalScore]));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(jData), 'ใบงาน');
+
+  // Team summary
+  const ts = {};
+  filtered.forEach(j=>{if(!ts[j.teamName])ts[j.teamName]={jobs:0,score:0};ts[j.teamName].jobs++;ts[j.teamName].score+=j.finalScore;});
+  const tData = [['ทีม','จำนวน Job','คะแนนรวม']];
+  Object.entries(ts).sort((a,b)=>b[1].score-a[1].score).forEach(([k,v])=>tData.push([k,v.jobs,v.score]));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(tData), 'สรุปทีม');
+
+  XLSX.writeFile(wb, `airtech_report_${month||'all'}.xlsx`);
+}
+
+// ── SETTINGS ──
+function renderSettings() {
+  // Teams
+  document.getElementById('teamsSettingsList').innerHTML = teams.map(t=>`
+    <div class="settings-item">
+      <div><div class="settings-name">${t.name}</div></div>
+      <div class="settings-actions">
+        <button class="btn-sm" onclick="editTeam('${t.id}')">แก้ไข</button>
+        <button class="btn-sm" onclick="deleteTeam('${t.id}')" style="color:var(--red);">ลบ</button>
+      </div>
+    </div>`).join('');
+  renderServicesSettings();
+  // populate type filter
+  const types = [...new Set(services.map(s=>s.type))].sort();
+  const tf = document.getElementById('serviceTypeFilter');
+  tf.innerHTML = '<option value="">ทุกประเภท</option>' + types.map(t=>`<option value="${t}">${t}</option>`).join('');
+}
+
+function renderServicesSettings() {
+  const q = (document.getElementById('serviceFilterSettings')?.value||'').toLowerCase();
+  const typeF = document.getElementById('serviceTypeFilter')?.value||'';
+  let filtered = services.filter(s=>
+    (!q || s.name.toLowerCase().includes(q) || s.type.toLowerCase().includes(q)) &&
+    (!typeF || s.type===typeF)
+  );
+  document.getElementById('servicesSettingsList').innerHTML = filtered.slice(0,100).map(s=>`
+    <div class="settings-item">
+      <div>
+        <div class="settings-name">${s.name}</div>
+        <div class="settings-meta">${s.type}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span class="settings-pts">${s.points.toLocaleString()} pts</span>
+        <div class="settings-actions">
+          <button class="btn-sm" onclick="editService('${s.id}')">แก้ไข</button>
+          <button class="btn-sm" onclick="deleteService('${s.id}')" style="color:var(--red);">ลบ</button>
+        </div>
+      </div>
+    </div>`).join('');
+  if(filtered.length>100) document.getElementById('servicesSettingsList').innerHTML += `<div style="text-align:center;padding:12px;font-size:12px;color:var(--text3);">แสดง 100/${filtered.length} รายการ — ใช้ค้นหาเพื่อกรอง</div>`;
+}
+
+// ── TEAM CRUD ──
+function showAddTeam() {
+  document.getElementById('modalTeamTitle').textContent = 'เพิ่มทีมช่าง';
+  document.getElementById('teamNameInput').value = '';
+  document.getElementById('teamEditId').value = '';
+  document.getElementById('modalAddTeam').classList.add('show');
+}
+function editTeam(id) {
+  const t = teams.find(t=>t.id===id);
+  document.getElementById('modalTeamTitle').textContent = 'แก้ไขทีมช่าง';
+  document.getElementById('teamNameInput').value = t.name;
+  document.getElementById('teamEditId').value = id;
+  document.getElementById('modalAddTeam').classList.add('show');
+}
+async function saveTeam() {
+  const name = document.getElementById('teamNameInput').value.trim();
+  if(!name) { showToast('⚠️ กรุณากรอกชื่อทีม'); return; }
+  const editId = document.getElementById('teamEditId').value;
+  const team = editId ? { id: editId, name } : { id: genId(), name };
+  await apiSaveTeam(team);
+  if(editId) { teams = teams.map(t=>t.id===editId?team:t); }
+  else { teams.push(team); }
+  closeModal('modalAddTeam'); renderSettings(); initTeamDropdown();
+  showToast('✅ บันทึกทีมสำเร็จ');
+}
+async function deleteTeam(id) {
+  if(!confirm('ต้องการลบทีมนี้?')) return;
+  await apiDeleteTeam(id);
+  teams = teams.filter(t=>t.id!==id);
+  renderSettings(); initTeamDropdown();
+  showToast('🗑 ลบทีมแล้ว');
+}
+
+// ── SERVICE CRUD ──
+function showAddService() {
+  document.getElementById('modalServiceTitle').textContent = 'เพิ่มรายการงาน';
+  document.getElementById('svcTypeInput').value='';
+  document.getElementById('svcNameInput').value='';
+  document.getElementById('svcPtsInput').value='';
+  document.getElementById('svcEditId').value='';
+  document.getElementById('modalAddService').classList.add('show');
+}
+function editService(id) {
+  const s = services.find(s=>s.id===id);
+  document.getElementById('modalServiceTitle').textContent = 'แก้ไขรายการงาน';
+  document.getElementById('svcTypeInput').value=s.type;
+  document.getElementById('svcNameInput').value=s.name;
+  document.getElementById('svcPtsInput').value=s.points;
+  document.getElementById('svcEditId').value=id;
+  document.getElementById('modalAddService').classList.add('show');
+}
+async function saveService() {
+  const type = document.getElementById('svcTypeInput').value.trim();
+  const name = document.getElementById('svcNameInput').value.trim();
+  const points = parseInt(document.getElementById('svcPtsInput').value)||0;
+  if(!name||!type) { showToast('⚠️ กรุณากรอกข้อมูลให้ครบ'); return; }
+  const editId = document.getElementById('svcEditId').value;
+  const svc = editId ? { id: editId, type, name, points } : { id: genId(), type, name, points };
+  await apiSaveService(svc);
+  if(editId) { services = services.map(s=>s.id===editId?svc:s); }
+  else { services.push(svc); }
+  closeModal('modalAddService'); renderServicesSettings();
+  showToast('✅ บันทึกรายการงานสำเร็จ');
+}
+async function deleteService(id) {
+  if(!confirm('ต้องการลบรายการนี้?')) return;
+  await apiDeleteService(id);
+  services = services.filter(s=>s.id!==id);
+  renderServicesSettings();
+  showToast('🗑 ลบรายการแล้ว');
+}
+
+// ── IMPORT EXCEL ──
+function showImportExcel() { document.getElementById('modalImport').classList.add('show'); }
+function processImport() {
+  const file = document.getElementById('importFile').files[0];
+  if(!file) { showToast('⚠️ กรุณาเลือกไฟล์'); return; }
+  const reader = new FileReader();
+  reader.onload = async e => {
+    const wb = XLSX.read(e.target.result, {type:'array'});
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const data = XLSX.utils.sheet_to_json(ws, {header:1});
+    const items = [];
+    data.slice(1).forEach(row=>{
+      if(!row[0]&&!row[1]) return;
+      const type = String(row[0]||'').trim();
+      const name = String(row[1]||'').trim();
+      const points = parseInt(row[2])||0;
+      if(!name) return;
+      items.push({id:genId(),type,name,points});
+    });
+    await apiImportServices(items);
+    // reload services from sheet
+    const data2 = await api({action:'getAll'});
+    if(data2.services) { services = data2.services; services.forEach(s=>s.points=Number(s.points)||0); }
+    document.getElementById('importStatus').textContent = `✅ Import ${items.length} รายการสำเร็จ`;
+    renderServicesSettings();
+    closeModal('modalImport');
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ── MODAL ──
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+document.querySelectorAll('.modal-overlay').forEach(m=>{
+  m.addEventListener('click', e=>{ if(e.target===m) m.classList.remove('show'); });
+});
+
+// ── TOAST ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.display='block';
+  setTimeout(()=>t.style.display='none', 2800);
+}
+
+// ── INIT ──
+loadData().then(() => {
+  // init UI after data loaded - nothing extra needed
+});
+</script>
+</body>
+</html>
