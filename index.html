@@ -1499,19 +1499,42 @@ function processImport() {
   const reader = new FileReader();
   reader.onload = async e => {
     const wb = XLSX.read(e.target.result, {type:'array'});
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const data = XLSX.utils.sheet_to_json(ws, {header:1});
     const items = [];
-    data.slice(1).forEach(row=>{
-      if(!row[0]&&!row[1]) return;
-      const type = String(row[0]||'').trim();
-      const name = String(row[1]||'').trim();
-      const points = parseInt(row[2])||0;
-      if(!name) return;
-      items.push({id:genId(),type,name,points});
-    });
+
+    // ── Sheet SERVICE ──
+    const wsService = wb.Sheets['SERVICE'];
+    if(wsService) {
+      const rows = XLSX.utils.sheet_to_json(wsService, {header:1});
+      let currentType = '', currentBtu = '';
+      rows.slice(2).forEach(row => {
+        if(row[0]) currentType = String(row[0]).trim();
+        if(row[1]) currentBtu = String(row[1]).trim();
+        const size   = row[2] ? String(row[2]).trim() : '';
+        const points = parseInt(row[3]) || 0;
+        if(currentType && currentBtu && size && points) {
+          items.push({ id: genId(), type: 'SERVICE - ' + currentType, name: currentBtu + ' ' + size, points });
+        }
+      });
+    }
+
+    // ── Sheet ค่าติดตั้ง ──
+    const wsInstall = wb.Sheets['ค่าติดตั้ง'];
+    if(wsInstall) {
+      const rows = XLSX.utils.sheet_to_json(wsInstall, {header:1});
+      let currentType = '';
+      rows.slice(2).forEach(row => {
+        if(row[0]) currentType = String(row[0]).trim();
+        const model  = row[1] ? String(row[1]).trim() : '';
+        const points = parseInt(row[2]) || 0;
+        if(currentType && model && points) {
+          items.push({ id: genId(), type: 'ติดตั้ง - ' + currentType, name: model, points });
+        }
+      });
+    }
+
+    if(items.length === 0) { showToast('⚠️ ไม่พบข้อมูลในไฟล์'); return; }
+
     await apiImportServices(items);
-    // reload services from sheet
     const data2 = await api({action:'getAll'});
     if(data2.services) { services = data2.services; services.forEach(s=>s.points=Number(s.points)||0); }
     document.getElementById('importStatus').textContent = `✅ Import ${items.length} รายการสำเร็จ`;
