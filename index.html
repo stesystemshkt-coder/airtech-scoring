@@ -926,6 +926,29 @@ function hideLoading() {
   document.getElementById('loadingOverlay').style.display='none';
 }
 
+function normalizeDate(dateStr) {
+  if(!dateStr || dateStr === '') return '';
+  // Already in yyyy-MM-dd format
+  if(/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+  // Handle "Sat Jun 20 2026 00:00:00 GM" or similar
+  // Extract year, month, day
+  const months = {Jan:'01',Feb:'02',Mar:'03',Apr:'04',May:'05',Jun:'06',Jul:'07',Aug:'08',Sep:'09',Oct:'10',Nov:'11',Dec:'12'};
+  const m = dateStr.match(/(\w{3})\s+(\d{1,2})\s+(\d{4})/);
+  if(m) {
+    const month = months[m[1]] || '01';
+    const day = m[2].padStart(2,'0');
+    const year = m[3];
+    return `${year}-${month}-${day}`;
+  }
+  // Try generic Date parse
+  const d = new Date(dateStr);
+  if(!isNaN(d.getTime())) {
+    const thai = new Date(d.getTime() + 7*60*60*1000);
+    return thai.toISOString().split('T')[0];
+  }
+  return dateStr;
+}
+
 async function loadData() {
   showLoading('กำลังโหลดข้อมูล...');
   try {
@@ -954,15 +977,7 @@ async function loadData() {
     // JOBS: always from Sheet
     if(data.jobs) {
       jobs = data.jobs.map(j => {
-        // Normalize date to yyyy-MM-dd
-        if(j.date && j.date !== '') {
-          const d = new Date(j.date);
-          if(!isNaN(d.getTime())) {
-            // Convert to Thai timezone
-            const thai = new Date(d.getTime() + 7*60*60*1000);
-            j.date = thai.toISOString().split('T')[0];
-          }
-        }
+        j.date = normalizeDate(j.date);
         return j;
       }).reverse();
     }
@@ -970,13 +985,7 @@ async function loadData() {
     // PROJECT JOBS
     if(data.projectJobs) {
       projectJobs = data.projectJobs.map(p => {
-        if(p.date && p.date !== '') {
-          const d = new Date(p.date);
-          if(!isNaN(d.getTime())) {
-            const thai = new Date(d.getTime() + 7*60*60*1000);
-            p.date = thai.toISOString().split('T')[0];
-          }
-        }
+        p.date = normalizeDate(p.date);
         return p;
       }).reverse();
     }
