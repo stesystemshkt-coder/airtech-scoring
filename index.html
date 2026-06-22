@@ -2009,7 +2009,7 @@ let projectTeamRows = []; // temp rows in modal
 
 function addProjectTeamRow(teamId='', teamName='', month='', pts='') {
   const rowId = genId();
-  projectTeamRows.push({ rowId, teamId, teamName, month, pts });
+  projectTeamRows.push({ rowId, teamId, teamName, month: month||new Date().toISOString().slice(0,7), pts });
   renderProjectTeamRows();
 }
 
@@ -2075,10 +2075,12 @@ function showAddProject() {
   document.getElementById('projectNameInput').value = '';
   document.getElementById('projectEditId').value = '';
   projectTeamRows = [];
-  renderProjectTeamRows();
-  // Add one empty row by default
-  addProjectTeamRow('','',new Date().toISOString().slice(0,7),'');
+  // Add one empty row then render
+  const rowId = genId();
+  projectTeamRows.push({ rowId, teamId:'', teamName:'', month: new Date().toISOString().slice(0,7), pts:'' });
   document.getElementById('modalAddProject').classList.add('show');
+  // Render after modal is visible
+  setTimeout(() => renderProjectTeamRows(), 50);
 }
 
 function editProject(id) {
@@ -2087,15 +2089,17 @@ function editProject(id) {
   document.getElementById('modalProjectTitle').textContent = '✏️ แก้ไขโปรเจ็ค';
   document.getElementById('projectNameInput').value = p.name;
   document.getElementById('projectEditId').value = id;
-  // Load existing team points for this project
   projectTeamRows = [];
   const existing = teamDailyPoints.filter(t => t.projectId === id);
   if(existing.length > 0) {
-    existing.forEach(t => addProjectTeamRow(t.teamId, t.teamName, t.month, t.pointsPerDay));
+    existing.forEach(t => {
+      projectTeamRows.push({ rowId: genId(), teamId: t.teamId, teamName: t.teamName, month: t.month, pts: t.pointsPerDay });
+    });
   } else {
-    addProjectTeamRow('','',new Date().toISOString().slice(0,7),'');
+    projectTeamRows.push({ rowId: genId(), teamId:'', teamName:'', month: new Date().toISOString().slice(0,7), pts:'' });
   }
   document.getElementById('modalAddProject').classList.add('show');
+  setTimeout(() => renderProjectTeamRows(), 50);
 }
 
 let _savingProject = false;
