@@ -1240,16 +1240,15 @@ function calcScore() {
   let totalProjectScore = 0;
   if(currentJobProjects.length > 0 && teamId && date) {
     const month = date.slice(0,7);
-    // Find matching teamDailyPoints - try project-linked first, then generic
-    const tdp = teamDailyPoints.find(t => t.teamId === teamId && t.month === month);
-    if(tdp) {
-      const dailyPoints = Number(tdp.pointsPerDay) || 0;
-      // Get other jobs of same team on same date (already saved)
+    // Find all daily points for this team+month
+    const tdpEntries2 = teamDailyPoints.filter(t => String(t.teamId) === String(teamId) && t.month === month);
+    const dailyPoints = tdpEntries2.reduce((a,b) => a + (Number(b.pointsPerDay)||0), 0);
+    if(dailyPoints > 0) {
       const otherJobsScore = jobs
-        .filter(j => j.teamId === teamId && (j.date||'').split('T')[0] === date)
+        .filter(j => String(j.teamId) === String(teamId) && (j.date||'').split('T')[0] === date)
         .reduce((a,b) => a+(Number(b.finalScore)||0), 0);
       const totalProjectPool = Math.max(0, dailyPoints - jobScore - otherJobsScore);
-      const perProject = Math.round(totalProjectPool / currentJobProjects.length);
+      const perProject = currentJobProjects.length > 0 ? Math.round(totalProjectPool / currentJobProjects.length) : totalProjectPool;
       projectScores = currentJobProjects.map(name => ({ name, score: perProject }));
       totalProjectScore = totalProjectPool;
     }
@@ -1307,8 +1306,9 @@ function renderJobItems() {
     const teamId = document.getElementById('teamValue').value;
     const date = document.getElementById('jobDate').value;
     const month = (date||'').slice(0,7);
-    // Find matching teamDailyPoints - try project-linked first, then generic
-    const tdp = teamDailyPoints.find(t => t.teamId === teamId && t.month === month);
+    // Find matching teamDailyPoints by teamId + month
+    const tdpEntries2 = teamDailyPoints.filter(t => t.teamId === teamId && t.month === month);
+    const tdp = tdpEntries2.length > 0 ? { pointsPerDay: tdpEntries2.reduce((a,b) => a + (Number(b.pointsPerDay)||0), 0) } : null;
     if(!tdp) {
       breakdownHTML += `<div style="font-size:12px;color:var(--yellow);margin-bottom:4px;">⚠️ ยังไม่ได้กำหนดคะแนนรายวันเดือนนี้</div>`;
     }
