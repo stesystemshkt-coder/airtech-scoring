@@ -628,15 +628,6 @@
         </div>
       </div>
 
-      <!-- Team Daily Points -->
-      <div class="card" style="margin-bottom:16px;">
-        <div class="card-header">
-          <div class="card-title">📅 คะแนนรายวันต่อทีม</div>
-          <button class="btn-sm" onclick="showAddTeamDailyPoints()" style="color:var(--accent);border-color:var(--accent);">+ กำหนดคะแนน</button>
-        </div>
-        <div id="teamDailyPointsList"></div>
-      </div>
-
       <!-- Project Names -->
       <div class="card" style="margin-bottom:16px;">
         <div class="card-header">
@@ -2107,10 +2098,13 @@ function editProject(id) {
   document.getElementById('modalAddProject').classList.add('show');
 }
 
+let _savingProject = false;
 async function saveProject() {
+  if(_savingProject) return;
+  _savingProject = true;
   const name = document.getElementById('projectNameInput').value.trim();
   const editId = document.getElementById('projectEditId').value;
-  if(!name) { showToast('⚠️ กรุณากรอกชื่อโปรเจ็ค'); return; }
+  if(!name) { showToast('⚠️ กรุณากรอกชื่อโปรเจ็ค'); _savingProject = false; return; }
 
   // Collect all row values first
   projectTeamRows.forEach(row => {
@@ -2136,6 +2130,7 @@ async function saveProject() {
     if(existing) { Object.assign(existing, tdp); } else { teamDailyPoints.push(tdp); }
   }
 
+  _savingProject = false;
   closeModal('modalAddProject');
   renderProjectPage();
   showToast('✅ บันทึกโปรเจ็คสำเร็จ');
