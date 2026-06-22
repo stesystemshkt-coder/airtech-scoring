@@ -1344,8 +1344,8 @@ async function saveJob() {
   };
   await apiSaveJob(job);
   jobs.unshift(job);
-  // Calculate and save project scores for this team+date (exclude this job)
-  await recalcProjectScores(teamId, teamName, date, job.id);
+  // Calculate and save project scores for this team+date
+  await recalcProjectScores(teamId, teamName, date, job.id, job.jobScore || 0);
   resetNewJob();
 }
 
@@ -1657,7 +1657,7 @@ async function saveEditJob() {
   job.discount = discount;
   job.projects = [...editJobProjects];
   await apiSaveJob(job);
-  await recalcProjectScores(teamId, teamName, date, job.id);
+  await recalcProjectScores(teamId, teamName, date, job.id, job.jobScore || 0);
   closeModal('modalEditJob');
   renderJobList();
   showToast('✅ แก้ไขใบงานสำเร็จ');
@@ -1926,18 +1926,22 @@ function showToast(msg) {
 // ── PROJECT JOBS ──
 
 // Recalculate all project scores for a team on a date
-async function recalcProjectScores(teamId, teamName, date, excludeJobId='') {
+async function recalcProjectScores(teamId, teamName, date, excludeJobId='', currentJobScore=0) {
   const month = date.slice(0,7);
   const tdpEntries = teamDailyPoints.filter(t => String(t.teamId) === String(teamId) && t.month === month);
   const dailyPoints = tdpEntries.reduce((a,b) => a + (Number(b.pointsPerDay)||0), 0);
   if(!dailyPoints) return;
-  // Sum ALL job scores for this team+date (including current job - it's already in jobs array)
-  const jobPoints = jobs
-    .filter(j => String(j.teamId) === String(teamId) && (j.date||'').split('T')[0] === date)
+  // Sum ONLY job scores (not finalScore which includes project) for other jobs this team+date
+  const otherJobsScore = jobs
+    .filter(j => String(j.teamId) === String(teamId) && (j.date||'').split('T')[0] === date && j.id !== excludeJobId)
     .reduce((a,b) => {
-      const js = Number(b.jobScore) || b.items.reduce((s,i) => s+(Number(i.pts)*Number(i.qty||1)),0);
+      // jobScore = งานปกติเท่านั้น ไม่รวมโปรเจ็ค
+      const js = Number(b.jobScore) > 0 
+        ? Number(b.jobScore) 
+        : b.items.reduce((s,i) => s+(Number(i.pts)*Number(i.qty||1)),0);
       return a + js;
     }, 0);
+  const jobPoints = otherJobsScore + Number(currentJobScore);
   const totalProjectScore = Math.max(0, dailyPoints - jobPoints);
 
   // Get all projectJobs for this team+date from jobs (including current job just saved)
