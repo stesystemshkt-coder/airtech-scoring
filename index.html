@@ -440,6 +440,17 @@
             <div class="dropdown-list" id="teamList"></div>
           </div>
         </div>
+        <div class="field" style="margin-bottom:12px;">
+          <label>โปรเจ็คที่ทำวันนี้ (ไม่บังคับ)</label>
+          <div id="jobProjectsWrap">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px;" id="jobProjectTags"></div>
+            <div class="search-dropdown">
+              <input type="text" id="jobProjectSearch" placeholder="พิมพ์ค้นหาโปรเจ็ค..." autocomplete="off"
+                oninput="filterJobProjectDropdown()" onfocus="showDropdown('jobProjectList')" onblur="hideDropdown('jobProjectList',300)">
+              <div class="dropdown-list" id="jobProjectList"></div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="card mt-16">
@@ -608,17 +619,16 @@
       </div>
     </div>
 
-    <!-- ADMIN: PROJECT JOBS -->
+    <!-- ADMIN: PROJECT -->
     <div class="page" id="pageProject">
       <div class="flex-between mt-12" style="margin-bottom:16px;">
         <div>
           <div style="font-size:20px;font-weight:700;">🏗️ งานโปรเจ็ค</div>
-          <div style="font-size:13px;color:var(--text3);margin-top:2px;">บันทึกและจัดการงานโปรเจ็ค</div>
+          <div style="font-size:13px;color:var(--text3);">คะแนนรายวันต่อทีม และสรุปผลงานโปรเจ็ค</div>
         </div>
-        <button class="btn-success" onclick="showAddProjectJob()">+ เพิ่มงานโปรเจ็ค</button>
       </div>
 
-      <!-- Team Daily Points Settings -->
+      <!-- Team Daily Points -->
       <div class="card" style="margin-bottom:16px;">
         <div class="card-header">
           <div class="card-title">📅 คะแนนรายวันต่อทีม</div>
@@ -627,59 +637,40 @@
         <div id="teamDailyPointsList"></div>
       </div>
 
-      <!-- Project Jobs List -->
+      <!-- Project Names -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-header">
+          <div class="card-title">🏗️ รายชื่อโปรเจ็ค</div>
+          <button class="btn-sm" onclick="showAddProject()" style="color:var(--accent);border-color:var(--accent);">+ เพิ่มโปรเจ็ค</button>
+        </div>
+        <div id="projectNamesList"></div>
+      </div>
+
+      <!-- Project Summary -->
       <div class="card">
         <div class="card-header">
-          <div class="card-title">📋 รายการงานโปรเจ็ค</div>
+          <div class="card-title">📊 สรุปผลงานโปรเจ็ค</div>
+          <input type="month" id="projectSummaryMonth" oninput="renderProjectSummary()" style="padding:6px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--sans);font-size:13px;outline:none;">
         </div>
-        <div class="filter-bar">
-          <input type="text" id="projectSearchFilter" placeholder="ค้นหาชื่อโปรเจ็ค..." oninput="renderProjectJobs()">
-          <select id="projectTeamFilter" onchange="renderProjectJobs()" style="padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--sans);font-size:13px;outline:none;">
-            <option value="">ทุกทีม</option>
-          </select>
-          <input type="month" id="projectMonthFilter" oninput="renderProjectJobs()" style="padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--sans);font-size:13px;outline:none;">
-        </div>
-        <div id="projectJobsList"></div>
+        <div id="projectSummaryContainer"></div>
       </div>
     </div>
 
   </div>
 </div>
 
-<!-- MODAL: Add Project Job -->
-<div class="modal-overlay" id="modalAddProjectJob">
-  <div class="modal" style="width:480px;">
-    <h3 id="modalProjectJobTitle">+ เพิ่มงานโปรเจ็ค</h3>
-    <div class="field-row" style="margin-bottom:12px;">
-      <div class="field">
-        <label>วันที่</label>
-        <input type="date" id="pjDate">
-      </div>
-      <div class="field">
-        <label>ทีมช่าง</label>
-        <div class="search-dropdown">
-          <input type="text" id="pjTeamSearch" placeholder="พิมพ์ค้นหาทีม..." autocomplete="off"
-            oninput="filterPjTeamDropdown()" onfocus="showDropdown('pjTeamList')" onblur="hideDropdown('pjTeamList',300)">
-          <input type="hidden" id="pjTeamValue">
-          <div class="dropdown-list" id="pjTeamList"></div>
-        </div>
-      </div>
-    </div>
-    <div class="field" style="margin-bottom:12px;">
+<!-- MODAL: Add Project Name -->
+<div class="modal-overlay" id="modalAddProject">
+  <div class="modal" style="width:400px;">
+    <h3 id="modalProjectTitle">+ เพิ่มโปรเจ็ค</h3>
+    <div class="field" style="margin-bottom:16px;">
       <label>ชื่อโปรเจ็ค</label>
-      <input type="text" id="pjName" placeholder="เช่น The White Ginger">
+      <input type="text" id="projectNameInput" placeholder="เช่น The White Ginger">
     </div>
-
-    <!-- Score preview -->
-    <div id="pjScorePreview" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:12px;font-size:13px;">
-      <div style="color:var(--text3);margin-bottom:6px;">คำนวณคะแนนอัตโนมัติ</div>
-      <div id="pjScoreBreakdown"></div>
-    </div>
-
-    <input type="hidden" id="pjEditId">
+    <input type="hidden" id="projectEditId">
     <div class="modal-actions">
-      <button class="btn-outline" onclick="closeModal('modalAddProjectJob')">ยกเลิก</button>
-      <button class="btn-success" onclick="saveProjectJob()">บันทึก</button>
+      <button class="btn-outline" onclick="closeModal('modalAddProject')">ยกเลิก</button>
+      <button class="btn-success" onclick="saveProject()">บันทึก</button>
     </div>
   </div>
 </div>
@@ -754,6 +745,15 @@
       </div>
     </div>
 
+    <div class="field" style="margin-bottom:12px;">
+      <label>โปรเจ็คที่ทำวันนี้ (ไม่บังคับ)</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px;" id="editJobProjectTags"></div>
+      <div class="search-dropdown">
+        <input type="text" id="editJobProjectSearch" placeholder="พิมพ์ค้นหาโปรเจ็ค..." autocomplete="off"
+          oninput="filterEditJobProjectDropdown()" onfocus="showDropdown('editJobProjectList')" onblur="hideDropdown('editJobProjectList',300)">
+        <div class="dropdown-list" id="editJobProjectList"></div>
+      </div>
+    </div>
     <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:8px;">รายการงาน</div>
     <table class="items-table" id="editItemsTable" style="margin-bottom:12px;">
       <thead><tr><th>#</th><th>รายการ</th><th>จำนวน</th><th>คะแนน/ชิ้น</th><th>รวม</th><th></th></tr></thead>
@@ -905,7 +905,9 @@ let services = [...DEFAULT_SERVICES];
 let jobs = [];
 let projectJobs = [];
 let teamDailyPoints = [];
+let projects = []; // project names list
 let currentItems = []; // items in new job form
+let currentJobProjects = []; // projects in new job form
 
 // ── GOOGLE SHEETS BACKEND ──
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbxFQcyWi7KBa60_8o_-21BUw-AeCg3FYJowHlnYel91UpDEYkYbp68AKz89fxWB6yOX2A/exec';
@@ -965,6 +967,11 @@ async function loadData() {
     if(data.teamDailyPoints) {
       teamDailyPoints = data.teamDailyPoints;
       teamDailyPoints.forEach(t => t.pointsPerDay = Number(t.pointsPerDay) || 0);
+    }
+
+    // PROJECTS (name list)
+    if(data.projects) {
+      projects = data.projects;
     }
 
   } catch(e) {
@@ -1269,6 +1276,7 @@ async function saveJob() {
     name: document.getElementById('jobName').value,
     customer: document.getElementById('jobCustomer').value,
     items: [...currentItems],
+    projects: [...currentJobProjects],
     rawScore: rawTotal,
     finalScore: finalTotal,
     discount,
@@ -1276,6 +1284,8 @@ async function saveJob() {
   };
   await apiSaveJob(job);
   jobs.unshift(job);
+  // Calculate and save project scores for this team+date
+  await recalcProjectScores(teamId, teamName, date);
   resetNewJob();
 }
 
@@ -1285,6 +1295,8 @@ function resetNewJob() {
   document.getElementById('jobCustomer').value = '';
   document.getElementById('teamSearch').value = '';
   document.getElementById('teamValue').value = '';
+  currentJobProjects = [];
+  renderJobProjectTags();
   document.getElementById('serviceSearch').value = '';
   document.getElementById('serviceValue').value = '';
   document.getElementById('servicePoints').value = '';
@@ -1543,6 +1555,8 @@ function showEditJob(id) {
   document.getElementById('editJobCustomer').value = job.customer||'';
   document.getElementById('editTeamSearch').value = job.teamName;
   document.getElementById('editTeamValue').value = job.teamId;
+  editJobProjects = [...(job.projects||[])];
+  renderEditJobProjectTags();
   // init team dropdown
   const list = document.getElementById('editTeamList');
   list.innerHTML = teams.map(t=>`<div class="dropdown-item" onmousedown="selectEditTeam('${t.id}','${t.name}')">${t.name}</div>`).join('');
@@ -1569,7 +1583,9 @@ async function saveEditJob() {
   job.rawScore = rawTotal;
   job.finalScore = finalTotal;
   job.discount = discount;
+  job.projects = [...editJobProjects];
   await apiSaveJob(job);
+  await recalcProjectScores(teamId, teamName, date);
   closeModal('modalEditJob');
   renderJobList();
   showToast('✅ แก้ไขใบงานสำเร็จ');
@@ -1836,40 +1852,191 @@ function showToast(msg) {
 }
 
 // ── PROJECT JOBS ──
-function calcProjectScore(teamId, date) {
+
+// Recalculate all project scores for a team on a date
+async function recalcProjectScores(teamId, teamName, date) {
   const month = date.slice(0,7);
   const tdp = teamDailyPoints.find(t => t.teamId === teamId && t.month === month);
-  if(!tdp) return { dailyPoints: 0, jobPoints: 0, projectScore: 0, projectCount: 0, perProject: 0 };
-
+  if(!tdp) return;
   const dailyPoints = Number(tdp.pointsPerDay) || 0;
-
-  // Sum job points for this team on this date
   const jobPoints = jobs
     .filter(j => j.teamId === teamId && (j.date||'').split('T')[0] === date)
-    .reduce((a, b) => a + (Number(b.finalScore) || 0), 0);
-
-  // Count project jobs for this team on this date (excluding current if editing)
-  const projectCount = projectJobs
-    .filter(p => p.teamId === teamId && p.date === date).length;
-
+    .reduce((a,b) => a + (Number(b.finalScore)||0), 0);
   const totalProjectScore = Math.max(0, dailyPoints - jobPoints);
-  const perProject = projectCount > 0 ? Math.round(totalProjectScore / (projectCount + 1)) : totalProjectScore;
 
-  return { dailyPoints, jobPoints, projectScore: totalProjectScore, projectCount, perProject };
+  // Get all projectJobs for this team+date from jobs
+  const allJobsToday = jobs.filter(j => j.teamId === teamId && (j.date||'').split('T')[0] === date);
+  const allProjects = [];
+  allJobsToday.forEach(j => { (j.projects||[]).forEach(p => allProjects.push({jobId:j.id, name:p})); });
+  const totalProjects = allProjects.length;
+  if(totalProjects === 0) return;
+  const perProject = Math.round(totalProjectScore / totalProjects);
+
+  // Save to projectJobs sheet
+  // Remove old entries for this team+date
+  const oldEntries = projectJobs.filter(p => p.teamId === teamId && p.date === date);
+  for(const old of oldEntries) { await apiDeleteProjectJob(old.id); }
+  projectJobs = projectJobs.filter(p => !(p.teamId === teamId && p.date === date));
+
+  // Add new entries
+  for(const proj of allProjects) {
+    const pj = { id: genId(), date, teamId, teamName, projectName: proj.name, score: perProject, createdAt: new Date().toISOString() };
+    await apiSaveProjectJob(pj);
+    projectJobs.unshift(pj);
+  }
 }
 
-function filterPjTeamDropdown() {
-  const q = document.getElementById('pjTeamSearch').value.toLowerCase();
-  const list = document.getElementById('pjTeamList');
-  const filtered = teams.filter(t => t.name.toLowerCase().includes(q));
-  list.innerHTML = filtered.map(t => `<div class="dropdown-item" onmousedown="selectPjTeam('${t.id}','${t.name}')">${t.name}</div>`).join('');
-  showDropdown('pjTeamList');
+// Project name tag management in job form
+function filterJobProjectDropdown() {
+  const q = document.getElementById('jobProjectSearch').value.toLowerCase();
+  const list = document.getElementById('jobProjectList');
+  if(!q) { list.classList.remove('show'); return; }
+  const filtered = projects.filter(p => p.name.toLowerCase().includes(q));
+  list.innerHTML = filtered.map(p => `<div class="dropdown-item" onmousedown="addJobProject('${p.name}')">${p.name}</div>`).join('');
+  if(filtered.length > 0) list.classList.add('show'); else list.classList.remove('show');
 }
-function selectPjTeam(id, name) {
-  document.getElementById('pjTeamSearch').value = name;
-  document.getElementById('pjTeamValue').value = id;
-  document.getElementById('pjTeamList').classList.remove('show');
-  updatePjScorePreview();
+
+function addJobProject(name) {
+  if(!currentJobProjects.includes(name)) {
+    currentJobProjects.push(name);
+    renderJobProjectTags();
+  }
+  document.getElementById('jobProjectSearch').value = '';
+  document.getElementById('jobProjectList').classList.remove('show');
+}
+
+function removeJobProject(name) {
+  currentJobProjects = currentJobProjects.filter(p => p !== name);
+  renderJobProjectTags();
+}
+
+function renderJobProjectTags() {
+  const el = document.getElementById('jobProjectTags');
+  if(!el) return;
+  el.innerHTML = currentJobProjects.map(p => `
+    <span style="background:rgba(59,130,246,0.15);color:var(--accent);font-size:12px;padding:3px 10px;border-radius:20px;display:inline-flex;align-items:center;gap:6px;">
+      🏗️ ${p}
+      <span onclick="removeJobProject('${p}')" style="cursor:pointer;color:var(--red);">×</span>
+    </span>`).join('');
+}
+
+// Edit job project tags
+let editJobProjects = [];
+function filterEditJobProjectDropdown() {
+  const q = document.getElementById('editJobProjectSearch')?.value.toLowerCase()||'';
+  const list = document.getElementById('editJobProjectList');
+  if(!q||!list) return;
+  const filtered = projects.filter(p => p.name.toLowerCase().includes(q));
+  list.innerHTML = filtered.map(p => `<div class="dropdown-item" onmousedown="addEditJobProject('${p.name}')">${p.name}</div>`).join('');
+  if(filtered.length > 0) list.classList.add('show'); else list.classList.remove('show');
+}
+function addEditJobProject(name) {
+  if(!editJobProjects.includes(name)) { editJobProjects.push(name); renderEditJobProjectTags(); }
+  document.getElementById('editJobProjectSearch').value = '';
+  document.getElementById('editJobProjectList').classList.remove('show');
+}
+function removeEditJobProject(name) {
+  editJobProjects = editJobProjects.filter(p => p !== name);
+  renderEditJobProjectTags();
+}
+function renderEditJobProjectTags() {
+  const el = document.getElementById('editJobProjectTags');
+  if(!el) return;
+  el.innerHTML = editJobProjects.map(p => `
+    <span style="background:rgba(59,130,246,0.15);color:var(--accent);font-size:12px;padding:3px 10px;border-radius:20px;display:inline-flex;align-items:center;gap:6px;">
+      🏗️ ${p}
+      <span onclick="removeEditJobProject('${p}')" style="cursor:pointer;color:var(--red);">×</span>
+    </span>`).join('');
+}
+
+// Project names management
+function showAddProject() {
+  document.getElementById('modalProjectTitle').textContent = '+ เพิ่มโปรเจ็ค';
+  document.getElementById('projectNameInput').value = '';
+  document.getElementById('projectEditId').value = '';
+  document.getElementById('modalAddProject').classList.add('show');
+}
+function editProject(id) {
+  const p = projects.find(p => p.id === id);
+  if(!p) return;
+  document.getElementById('modalProjectTitle').textContent = '✏️ แก้ไขโปรเจ็ค';
+  document.getElementById('projectNameInput').value = p.name;
+  document.getElementById('projectEditId').value = id;
+  document.getElementById('modalAddProject').classList.add('show');
+}
+async function saveProject() {
+  const name = document.getElementById('projectNameInput').value.trim();
+  const editId = document.getElementById('projectEditId').value;
+  if(!name) { showToast('⚠️ กรุณากรอกชื่อโปรเจ็ค'); return; }
+  const proj = { id: editId||genId(), name };
+  await api({ action: 'saveProject', data: JSON.stringify(proj) });
+  if(editId) { projects = projects.map(p => p.id===editId ? proj : p); }
+  else { projects.push(proj); }
+  closeModal('modalAddProject');
+  renderProjectNamesList();
+  showToast('✅ บันทึกโปรเจ็คสำเร็จ');
+}
+async function deleteProject(id) {
+  if(!confirm('ต้องการลบโปรเจ็คนี้?')) return;
+  await api({ action: 'deleteProject', id });
+  projects = projects.filter(p => p.id !== id);
+  renderProjectNamesList();
+  showToast('🗑 ลบโปรเจ็คแล้ว');
+}
+function renderProjectNamesList() {
+  const el = document.getElementById('projectNamesList');
+  if(!el) return;
+  if(projects.length === 0) { el.innerHTML = `<div class="empty"><div class="empty-icon">🏗️</div><p>ยังไม่มีโปรเจ็ค</p></div>`; return; }
+  el.innerHTML = projects.map(p => `
+    <div class="settings-item">
+      <div class="settings-name">🏗️ ${p.name}</div>
+      <div class="settings-actions">
+        <button class="btn-sm" onclick="editProject('${p.id}')">แก้ไข</button>
+        <button class="btn-sm" onclick="deleteProject('${p.id}')" style="color:var(--red);">ลบ</button>
+      </div>
+    </div>`).join('');
+}
+
+function renderProjectPage() {
+  renderTeamDailyPointsList();
+  renderProjectNamesList();
+  renderProjectSummary();
+}
+
+function renderProjectSummary() {
+  const month = document.getElementById('projectSummaryMonth')?.value || new Date().toISOString().slice(0,7);
+  const container = document.getElementById('projectSummaryContainer');
+  if(!container) return;
+
+  const filtered = projectJobs.filter(p => p.date.startsWith(month));
+  if(filtered.length === 0) {
+    container.innerHTML = `<div class="empty"><div class="empty-icon">📊</div><p>ไม่มีข้อมูลโปรเจ็คเดือนนี้</p></div>`; return;
+  }
+
+  // Group by project name
+  const byProject = {};
+  filtered.forEach(p => {
+    if(!byProject[p.projectName]) byProject[p.projectName] = { totalScore: 0, days: new Set(), teams: {} };
+    byProject[p.projectName].totalScore += Number(p.score)||0;
+    byProject[p.projectName].days.add(p.date);
+    if(!byProject[p.projectName].teams[p.teamName]) byProject[p.projectName].teams[p.teamName] = 0;
+    byProject[p.projectName].teams[p.teamName] += Number(p.score)||0;
+  });
+
+  container.innerHTML = Object.entries(byProject).map(([name, data]) => `
+    <div style="border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div style="font-size:15px;font-weight:600;">🏗️ ${name}</div>
+        <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--accent2);">${data.totalScore.toLocaleString()} pts</div>
+      </div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:8px;">รวม ${data.days.size} วัน</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        ${Object.entries(data.teams).map(([team, score]) => `
+          <span style="background:rgba(59,130,246,0.1);color:var(--accent);font-size:12px;padding:3px 10px;border-radius:20px;">
+            ${team}: ${score.toLocaleString()} pts
+          </span>`).join('')}
+      </div>
+    </div>`).join('');
 }
 
 function filterTdpTeamDropdown() {
