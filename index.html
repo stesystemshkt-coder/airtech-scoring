@@ -906,7 +906,7 @@ let currentItems = []; // items in new job form
 let currentJobProjects = []; // projects in new job form
 
 // ── GOOGLE SHEETS BACKEND ──
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbxOUIpWcYD6-KOvJwWT5_hvcXCLD5hhchEjn9l-gznYqJ4kZ9OV1xDStE8IclF-DaWA3A/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyBGs4zrTrZsoduZn-Aee-SGTXMo9ytV7EfFM7kASQXH1jLsZweYtvIKJugwyWuje0sUg/exec';
 
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
 
@@ -1385,7 +1385,7 @@ function renderJobList() {
     <div class="job-card" onclick="showJobDetail('${j.id}')">
       <div class="job-card-header">
         <div>
-          <div class="job-no">${j.jobNo} &nbsp;·&nbsp; ${(j.date||'').split('T')[0]}</div>
+          <div class="job-no">${j.jobNo} &nbsp;·&nbsp; ${j.date instanceof Date ? j.date.toISOString().split('T')[0] : (j.date||'').split('T')[0]}</div>
           <div class="job-customer">${j.customer||'ไม่ระบุลูกค้า'}</div>
           <div class="job-meta">${j.name||'ไม่ระบุชื่องาน'} &nbsp;·&nbsp; ${j.items.length} รายการ
             ${(j.workDays&&j.workDays.length>0)?`&nbsp;·&nbsp; <span style="color:var(--accent);">📅 ${j.workDays.length} วัน</span>`:''}
@@ -1424,7 +1424,7 @@ function showJobDetail(id) {
   document.getElementById('modalJobTitle').textContent = `${job.jobNo} — ${job.customer||'ไม่ระบุลูกค้า'}`;
   document.getElementById('modalJobContent').innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;font-size:13px;">
-      <div><span style="color:var(--text3);">วันที่สร้าง:</span> ${(job.date||'').split('T')[0]}</div>
+      <div><span style="color:var(--text3);">วันที่สร้าง:</span> ${job.date instanceof Date ? job.date.toLocaleDateString('th-TH') : (job.date||'').split('T')[0]}</div>
       <div><span style="color:var(--text3);">ทีม:</span> ${job.teamName}</div>
       <div><span style="color:var(--text3);">ลูกค้า:</span> ${job.customer||'-'}</div>
       <div><span style="color:var(--text3);">ชื่องาน:</span> ${job.name||'-'}</div>
