@@ -2171,13 +2171,10 @@ function renderProjectNamesList() {
 
 function renderProjectPage() {
   renderProjectNamesList();
+  // set default month for summary
+  const sm = document.getElementById('projectSummaryMonth');
+  if(sm && !sm.value) sm.value = new Date().toISOString().slice(0,7);
   renderProjectSummary();
-  // hide old team daily points section if exists
-  const tdpSection = document.getElementById('teamDailyPointsList');
-  if(tdpSection && tdpSection.closest('.card')) {
-    const card = tdpSection.closest('.card');
-    // only hide if it's the standalone card (not inside project)
-  }
 }
 
 function renderProjectSummary() {
@@ -2352,13 +2349,7 @@ async function deleteProjectJob(id) {
   showToast('🗑 ลบงานโปรเจ็คแล้ว');
 }
 
-function renderProjectPage() {
-  renderTeamDailyPointsList();
-  renderProjectJobs();
-  // populate team filter
-  const tf = document.getElementById('projectTeamFilter');
-  if(tf) tf.innerHTML = '<option value="">ทุกทีม</option>' + teams.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
-}
+// renderProjectPage is defined above
 
 function renderProjectJobs() {
   const q = (document.getElementById('projectSearchFilter')?.value||'').toLowerCase();
