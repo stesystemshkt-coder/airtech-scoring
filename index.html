@@ -1246,7 +1246,7 @@ function calcScore() {
     if(dailyPoints > 0) {
       const otherJobsScore = jobs
         .filter(j => String(j.teamId) === String(teamId) && (j.date||'').split('T')[0] === date)
-        .reduce((a,b) => a+(Number(b.finalScore)||0), 0);
+        .reduce((a,b) => a+(Number(b.jobScore || b.rawScore)||0), 0);
       const totalProjectPool = Math.max(0, dailyPoints - jobScore - otherJobsScore);
       const perProject = currentJobProjects.length > 0 ? Math.round(totalProjectPool / currentJobProjects.length) : totalProjectPool;
       projectScores = currentJobProjects.map(name => ({ name, score: perProject }));
@@ -1344,8 +1344,8 @@ async function saveJob() {
   };
   await apiSaveJob(job);
   jobs.unshift(job);
-  // Calculate and save project scores for this team+date
-  await recalcProjectScores(teamId, teamName, date);
+  // Calculate and save project scores for this team+date (exclude this job)
+  await recalcProjectScores(teamId, teamName, date, job.id);
   resetNewJob();
 }
 
@@ -1645,7 +1645,7 @@ async function saveEditJob() {
   job.discount = discount;
   job.projects = [...editJobProjects];
   await apiSaveJob(job);
-  await recalcProjectScores(teamId, teamName, date);
+  await recalcProjectScores(teamId, teamName, date, job.id);
   closeModal('modalEditJob');
   renderJobList();
   showToast('✅ แก้ไขใบงานสำเร็จ');
@@ -1914,14 +1914,14 @@ function showToast(msg) {
 // ── PROJECT JOBS ──
 
 // Recalculate all project scores for a team on a date
-async function recalcProjectScores(teamId, teamName, date) {
+async function recalcProjectScores(teamId, teamName, date, excludeJobId='') {
   const month = date.slice(0,7);
-  const tdp = teamDailyPoints.find(t => t.teamId === teamId && t.month === month);
-  if(!tdp) return;
-  const dailyPoints = Number(tdp.pointsPerDay) || 0;
+  const tdpEntries = teamDailyPoints.filter(t => String(t.teamId) === String(teamId) && t.month === month);
+  const dailyPoints = tdpEntries.reduce((a,b) => a + (Number(b.pointsPerDay)||0), 0);
+  if(!dailyPoints) return;
   const jobPoints = jobs
-    .filter(j => j.teamId === teamId && (j.date||'').split('T')[0] === date)
-    .reduce((a,b) => a + (Number(b.finalScore)||0), 0);
+    .filter(j => String(j.teamId) === String(teamId) && (j.date||'').split('T')[0] === date && j.id !== excludeJobId)
+    .reduce((a,b) => a + (Number(b.jobScore || b.finalScore)||0), 0);
   const totalProjectScore = Math.max(0, dailyPoints - jobPoints);
 
   // Get all projectJobs for this team+date from jobs
