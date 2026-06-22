@@ -1430,6 +1430,7 @@ function showJobDetail(id) {
       <div><span style="color:var(--text3);">ชื่องาน:</span> ${job.name||'-'}</div>
     </div>
     ${workDaysHTML}
+    ${job.items.length > 0 ? `
     <table class="items-table" style="margin-bottom:12px;">
       <thead><tr><th>#</th><th>รายการ</th><th>จำนวน</th><th>คะแนน/ชิ้น</th><th>รวม</th></tr></thead>
       <tbody>
@@ -1441,13 +1442,24 @@ function showJobDetail(id) {
           <td class="pts-cell">${(it.pts*it.qty).toLocaleString()}</td>
         </tr>`).join('')}
       </tbody>
-    </table>
-    <div class="score-box">
-      <div>
-        <div class="score-label">คะแนนรวมทีม</div>
-        ${job.discount>0?`<div style="font-size:12px;color:var(--text3)">ก่อนลด: ${job.rawScore.toLocaleString()} | ลด ${job.discount*100}%</div>`:''}
+    </table>` : ''}
+    <div style="background:linear-gradient(135deg,rgba(59,130,246,0.08),rgba(34,211,238,0.04));border:1px solid rgba(59,130,246,0.25);border-radius:10px;padding:14px 16px;">
+      ${job.items.length > 0 ? `<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;">
+        <span style="color:var(--text2);">งานปกติ${job.discount>0?' (ลด '+job.discount*100+'%)':''}</span>
+        <span style="font-family:var(--mono);">${(job.jobScore||job.rawScore||0).toLocaleString()} pts</span>
+      </div>` : ''}
+      ${(job.projects||[]).map(pname => {
+        const pj = projectJobs.find(p => p.projectName === pname && p.date === (job.date||'').split('T')[0] && p.teamId === job.teamId);
+        const pScore = pj ? Number(pj.score)||0 : 0;
+        return `<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;">
+          <span style="color:var(--accent2);">🏗️ ${pname}</span>
+          <span style="font-family:var(--mono);color:var(--accent2);">${pScore.toLocaleString()} pts ⚡</span>
+        </div>`;
+      }).join('')}
+      <div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:13px;color:var(--text2);font-weight:600;">คะแนนรวมทีม</span>
+        <span style="font-family:var(--mono);font-size:22px;font-weight:700;color:var(--accent2);">${job.finalScore.toLocaleString()}</span>
       </div>
-      <div class="score-value">${job.finalScore.toLocaleString()}</div>
     </div>`;
 
   // Actions based on role
@@ -1921,7 +1933,11 @@ async function recalcProjectScores(teamId, teamName, date, excludeJobId='') {
   if(!dailyPoints) return;
   const jobPoints = jobs
     .filter(j => String(j.teamId) === String(teamId) && (j.date||'').split('T')[0] === date && j.id !== excludeJobId)
-    .reduce((a,b) => a + (Number(b.jobScore || b.finalScore)||0), 0);
+    .reduce((a,b) => {
+      // Use jobScore if available, otherwise calculate from items
+      const js = Number(b.jobScore) || b.items.reduce((s,i) => s+(Number(i.pts)*Number(i.qty||1)),0);
+      return a + js;
+    }, 0);
   const totalProjectScore = Math.max(0, dailyPoints - jobPoints);
 
   // Get all projectJobs for this team+date from jobs
