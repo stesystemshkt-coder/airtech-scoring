@@ -419,7 +419,7 @@
         <div class="field-row three">
           <div class="field">
             <label>วันที่</label>
-            <input type="date" id="jobDate">
+            <input type="date" id="jobDate" oninput="renderJobItems()">
           </div>
           <div class="field">
             <label>ชื่องาน / เลขที่งาน (ไม่บังคับ)</label>
@@ -502,14 +502,14 @@
           </table>
         </div>
 
-        <div class="score-box" id="scoreBox" style="display:none;">
-          <div>
-            <div class="score-label">คะแนนรวมทีม</div>
-            <div class="score-detail" id="scoreDetail"></div>
-          </div>
-          <div style="text-align:right;">
-            <div id="discountTag"></div>
-            <div class="score-value" id="scoreFinal">0</div>
+        <div id="scoreBox" style="display:none;background:linear-gradient(135deg,rgba(59,130,246,0.08),rgba(34,211,238,0.04));border:1px solid rgba(59,130,246,0.25);border-radius:10px;padding:14px 16px;margin-top:12px;">
+          <div id="scoreBreakdown"></div>
+          <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px;display:flex;justify-content:space-between;align-items:center;">
+            <div style="font-size:13px;color:var(--text2);font-weight:600;">คะแนนรวมทีม</div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div id="discountTag"></div>
+              <div class="score-value" id="scoreFinal">0</div>
+            </div>
           </div>
         </div>
       </div>
@@ -1183,6 +1183,7 @@ function selectTeam(id, name) {
   document.getElementById('teamSearch').value = name;
   document.getElementById('teamValue').value = id;
   document.getElementById('teamList').classList.remove('show');
+  renderJobItems();
 }
 
 function selectService(id, name, pts, type) {
@@ -1218,45 +1219,97 @@ function removeJobItem(id) {
 }
 
 function calcScore() {
-  // count service items for discount
   const serviceItems = currentItems.filter(i=>i.type.startsWith('SERVICE'));
   const totalServiceUnits = serviceItems.reduce((a,b)=>a+b.qty,0);
   let discount = 0;
   if(totalServiceUnits >= 11) discount = 0.15;
   else if(totalServiceUnits >= 6) discount = 0.10;
   else if(totalServiceUnits >= 3) discount = 0.05;
-
   let rawTotal = currentItems.reduce((a,b)=>a+(b.pts*b.qty),0);
   let serviceRaw = serviceItems.reduce((a,b)=>a+(b.pts*b.qty),0);
   let nonServiceRaw = rawTotal - serviceRaw;
-  let finalTotal = nonServiceRaw + Math.round(serviceRaw * (1-discount));
-  return { rawTotal, finalTotal, discount, totalServiceUnits };
+  let jobScore = nonServiceRaw + Math.round(serviceRaw * (1-discount));
+
+  // Calculate project scores
+  const teamId = document.getElementById('teamValue').value;
+  const date = document.getElementById('jobDate').value;
+  let projectScores = [];
+  let totalProjectScore = 0;
+  if(currentJobProjects.length > 0 && teamId && date) {
+    const month = date.slice(0,7);
+    const tdp = teamDailyPoints.find(t => t.teamId === teamId && t.month === month);
+    if(tdp) {
+      const dailyPoints = Number(tdp.pointsPerDay) || 0;
+      // Get other jobs of same team on same date (already saved)
+      const otherJobsScore = jobs
+        .filter(j => j.teamId === teamId && (j.date||'').split('T')[0] === date)
+        .reduce((a,b) => a+(Number(b.finalScore)||0), 0);
+      const totalProjectPool = Math.max(0, dailyPoints - jobScore - otherJobsScore);
+      const perProject = Math.round(totalProjectPool / currentJobProjects.length);
+      projectScores = currentJobProjects.map(name => ({ name, score: perProject }));
+      totalProjectScore = totalProjectPool;
+    }
+  }
+
+  const finalTotal = jobScore + totalProjectScore;
+  return { rawTotal, jobScore, finalTotal, discount, totalServiceUnits, projectScores, totalProjectScore };
 }
 
 function renderJobItems() {
   const empty = document.getElementById('emptyItems');
   const table = document.getElementById('jobItemsTable');
   const scoreBox = document.getElementById('scoreBox');
-  if(currentItems.length === 0) {
+  const hasItems = currentItems.length > 0;
+  const hasProjects = currentJobProjects.length > 0;
+
+  if(!hasItems && !hasProjects) {
     empty.style.display='block'; table.style.display='none'; scoreBox.style.display='none'; return;
   }
-  empty.style.display='none'; table.style.display='table'; scoreBox.style.display='flex';
-  const { rawTotal, finalTotal, discount, totalServiceUnits } = calcScore();
-  document.getElementById('jobItemsBody').innerHTML = currentItems.map((item,i)=>`
-    <tr>
-      <td style="color:var(--text3);">${i+1}</td>
-      <td>${item.name}</td>
-      <td><span class="type-badge" style="font-size:11px;padding:2px 6px;border-radius:4px;background:rgba(59,130,246,0.1);color:var(--accent2);">${item.type}</span></td>
-      <td>${item.qty}</td>
-      <td class="pts-cell">${item.pts.toLocaleString()}</td>
-      <td class="pts-cell">${(item.pts*item.qty).toLocaleString()}</td>
-      <td><button class="btn-icon" onclick="removeJobItem('${item.id}')">✕</button></td>
-    </tr>`).join('');
+  empty.style.display='none';
+  table.style.display = hasItems ? 'table' : 'none';
+  scoreBox.style.display='block';
 
-  document.getElementById('scoreDetail').textContent =
-    discount > 0 ? `Service ${totalServiceUnits} ชุด (ลด ${discount*100}%) | รวมก่อนลด ${rawTotal.toLocaleString()}` : `รายการทั้งหมด ${currentItems.length} รายการ`;
-  document.getElementById('discountTag').innerHTML =
-    discount > 0 ? `<span class="discount-tag">ลด ${discount*100}%</span>` : '';
+  const { rawTotal, jobScore, finalTotal, discount, totalServiceUnits, projectScores } = calcScore();
+
+  if(hasItems) {
+    document.getElementById('jobItemsBody').innerHTML = currentItems.map((item,i)=>`
+      <tr>
+        <td style="color:var(--text3);">${i+1}</td>
+        <td>${item.name}</td>
+        <td><span class="type-badge" style="font-size:11px;padding:2px 6px;border-radius:4px;background:rgba(59,130,246,0.1);color:var(--accent2);">${item.type}</span></td>
+        <td>${item.qty}</td>
+        <td class="pts-cell">${item.pts.toLocaleString()}</td>
+        <td class="pts-cell">${(item.pts*item.qty).toLocaleString()}</td>
+        <td><button class="btn-icon" onclick="removeJobItem('${item.id}')">✕</button></td>
+      </tr>`).join('');
+  }
+
+  // Build score breakdown
+  let breakdownHTML = '';
+  if(hasItems) {
+    breakdownHTML += `<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
+      <span style="color:var(--text2);">งานปกติ ${discount>0?`<span style="color:var(--yellow);font-size:11px;">(ลด ${discount*100}%)</span>`:''}</span>
+      <span style="font-family:var(--mono);color:var(--text);">${jobScore.toLocaleString()} pts</span>
+    </div>`;
+  }
+  if(projectScores.length > 0) {
+    projectScores.forEach(p => {
+      breakdownHTML += `<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
+        <span style="color:var(--accent2);">🏗️ ${p.name}</span>
+        <span style="font-family:var(--mono);color:var(--accent2);">${p.score.toLocaleString()} pts ⚡</span>
+      </div>`;
+    });
+  } else if(hasProjects) {
+    const teamId = document.getElementById('teamValue').value;
+    const date = document.getElementById('jobDate').value;
+    const month = (date||'').slice(0,7);
+    const tdp = teamDailyPoints.find(t => t.teamId === teamId && t.month === month);
+    if(!tdp) {
+      breakdownHTML += `<div style="font-size:12px;color:var(--yellow);margin-bottom:4px;">⚠️ ยังไม่ได้กำหนดคะแนนรายวันเดือนนี้</div>`;
+    }
+  }
+  document.getElementById('scoreBreakdown').innerHTML = breakdownHTML;
+  document.getElementById('discountTag').innerHTML = '';
   document.getElementById('scoreFinal').textContent = finalTotal.toLocaleString();
 }
 
@@ -1268,7 +1321,7 @@ async function saveJob() {
   if(!date) { showToast('⚠️ กรุณาเลือกวันที่'); return; }
   if(!teamId) { showToast('⚠️ กรุณาเลือกทีมช่าง'); return; }
   if(currentItems.length === 0) { showToast('⚠️ กรุณาเพิ่มรายการงานอย่างน้อย 1 รายการ'); return; }
-  const { finalTotal, rawTotal, discount } = calcScore();
+  const { finalTotal, rawTotal, jobScore, discount, projectScores } = calcScore();
   const job = {
     id: genId(),
     jobNo: 'J' + String(jobs.length+1).padStart(4,'0'),
@@ -1277,7 +1330,9 @@ async function saveJob() {
     customer: document.getElementById('jobCustomer').value,
     items: [...currentItems],
     projects: [...currentJobProjects],
+    projectScores: projectScores || [],
     rawScore: rawTotal,
+    jobScore: jobScore,
     finalScore: finalTotal,
     discount,
     createdAt: new Date().toISOString()
@@ -1900,6 +1955,7 @@ function addJobProject(name) {
   if(!currentJobProjects.includes(name)) {
     currentJobProjects.push(name);
     renderJobProjectTags();
+    renderJobItems();
   }
   document.getElementById('jobProjectSearch').value = '';
   document.getElementById('jobProjectList').classList.remove('show');
@@ -1908,6 +1964,7 @@ function addJobProject(name) {
 function removeJobProject(name) {
   currentJobProjects = currentJobProjects.filter(p => p !== name);
   renderJobProjectTags();
+  renderJobItems();
 }
 
 function renderJobProjectTags() {
