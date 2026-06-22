@@ -611,13 +611,104 @@
 </div>
 
 <!-- MODAL: Job Detail / Edit -->
+<!-- MODAL: Job Detail -->
 <div class="modal-overlay" id="modalJobDetail">
-  <div class="modal" style="width:580px;">
-    <h3 id="modalJobTitle">รายละเอียดใบงาน</h3>
+  <div class="modal" style="width:640px;max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;">
+      <h3 id="modalJobTitle" style="margin:0;">รายละเอียดใบงาน</h3>
+      <button class="btn-outline" onclick="closeModal('modalJobDetail')" style="padding:4px 12px;font-size:13px;">✕</button>
+    </div>
     <div id="modalJobContent"></div>
+    <div class="modal-actions" id="modalJobActions"></div>
+  </div>
+</div>
+
+<!-- MODAL: Edit Job (Admin) -->
+<div class="modal-overlay" id="modalEditJob">
+  <div class="modal" style="width:640px;max-height:90vh;overflow-y:auto;">
+    <h3>✏️ แก้ไขใบงาน</h3>
+    <div class="field-row three" style="margin-bottom:12px;">
+      <div class="field">
+        <label>วันที่</label>
+        <input type="date" id="editJobDate">
+      </div>
+      <div class="field">
+        <label>ชื่องาน (ไม่บังคับ)</label>
+        <input type="text" id="editJobName" placeholder="ชื่องาน">
+      </div>
+      <div class="field">
+        <label>ชื่อลูกค้า (ไม่บังคับ)</label>
+        <input type="text" id="editJobCustomer" placeholder="ชื่อลูกค้า">
+      </div>
+    </div>
+    <div class="field" style="margin-bottom:16px;">
+      <label>ทีมช่าง</label>
+      <div class="search-dropdown">
+        <input type="text" id="editTeamSearch" placeholder="พิมพ์ค้นหาทีม..." autocomplete="off"
+          oninput="filterEditTeamDropdown()" onfocus="showDropdown('editTeamList')" onblur="hideDropdown('editTeamList',300)">
+        <input type="hidden" id="editTeamValue">
+        <div class="dropdown-list" id="editTeamList"></div>
+      </div>
+    </div>
+
+    <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:8px;">รายการงาน</div>
+    <table class="items-table" id="editItemsTable" style="margin-bottom:12px;">
+      <thead><tr><th>#</th><th>รายการ</th><th>จำนวน</th><th>คะแนน/ชิ้น</th><th>รวม</th><th></th></tr></thead>
+      <tbody id="editItemsBody"></tbody>
+    </table>
+
+    <!-- เพิ่มรายการงานใหม่ -->
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:12px;">
+      <div style="font-size:12px;color:var(--text3);margin-bottom:8px;font-weight:600;">+ เพิ่มรายการงาน</div>
+      <div class="field-row" style="align-items:flex-end;">
+        <div class="field">
+          <label>ค้นหางาน</label>
+          <div class="search-dropdown">
+            <input type="text" id="editServiceSearch" placeholder="พิมพ์ชื่องาน..." autocomplete="off"
+              oninput="filterEditServiceDropdown()" onfocus="showDropdown('editServiceList')" onblur="hideDropdown('editServiceList',300)">
+            <input type="hidden" id="editServiceValue">
+            <input type="hidden" id="editServicePoints">
+            <div class="dropdown-list" id="editServiceList"></div>
+          </div>
+        </div>
+        <div class="field" style="max-width:80px;">
+          <label>จำนวน</label>
+          <input type="number" id="editItemQty" value="1" min="1" max="99">
+        </div>
+        <div><button class="btn-success" onclick="addEditItem()" style="margin-top:20px;padding:9px 16px;">+ เพิ่ม</button></div>
+      </div>
+    </div>
+
+    <div class="score-box" id="editScoreBox">
+      <div>
+        <div class="score-label">คะแนนรวมทีม</div>
+        <div class="score-detail" id="editScoreDetail"></div>
+      </div>
+      <div style="text-align:right;">
+        <div id="editDiscountTag"></div>
+        <div class="score-value" id="editScoreFinal">0</div>
+      </div>
+    </div>
+
     <div class="modal-actions">
-      <button class="btn-outline" onclick="closeModal('modalJobDetail')">ปิด</button>
-      <button class="btn-danger" id="btnDeleteJob" onclick="deleteCurrentJob()">🗑 ลบใบงาน</button>
+      <button class="btn-outline" onclick="closeModal('modalEditJob')">ยกเลิก</button>
+      <button class="btn-success" onclick="saveEditJob()">💾 บันทึกการแก้ไข</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Add Work Day -->
+<div class="modal-overlay" id="modalAddWorkDay">
+  <div class="modal" style="width:400px;">
+    <h3>📅 เพิ่มวันทำงาน</h3>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:16px;" id="addWorkDayJobInfo"></div>
+    <div class="field" style="margin-bottom:16px;">
+      <label>วันที่ทำงาน</label>
+      <input type="date" id="workDayDate">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeModal('modalAddWorkDay')">ยกเลิก</button>
+      <button class="btn-success" onclick="saveWorkDay()">+ เพิ่มวันทำงาน</button>
     </div>
   </div>
 </div>
@@ -1074,9 +1165,11 @@ function renderJobList() {
     <div class="job-card" onclick="showJobDetail('${j.id}')">
       <div class="job-card-header">
         <div>
-          <div class="job-no">${j.jobNo} &nbsp;·&nbsp; ${j.date}</div>
+          <div class="job-no">${j.jobNo} &nbsp;·&nbsp; ${(j.date||'').split('T')[0]}</div>
           <div class="job-customer">${j.customer||'ไม่ระบุลูกค้า'}</div>
-          <div class="job-meta">${j.name||'ไม่ระบุชื่องาน'} &nbsp;·&nbsp; ${j.items.length} รายการ</div>
+          <div class="job-meta">${j.name||'ไม่ระบุชื่องาน'} &nbsp;·&nbsp; ${j.items.length} รายการ
+            ${(j.workDays&&j.workDays.length>0)?`&nbsp;·&nbsp; <span style="color:var(--accent);">📅 ${j.workDays.length} วัน</span>`:''}
+          </div>
           <span class="job-team-tag">👷 ${j.teamName}</span>
         </div>
         <div class="job-score-badge">
@@ -1093,14 +1186,30 @@ function showJobDetail(id) {
   const job = jobs.find(j=>j.id===id);
   if(!job) return;
   currentJobId = id;
+
+  const workDays = job.workDays || [];
+  const workDaysSorted = [...workDays].sort();
+  const workDaysHTML = workDays.length > 0 ? `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:12px;">
+      <div style="font-size:12px;font-weight:600;color:var(--text3);margin-bottom:8px;">📅 วันทำงาน (${workDays.length} วัน)</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        ${workDaysSorted.map(d=>`
+          <span style="background:rgba(59,130,246,0.1);color:var(--accent);font-size:12px;padding:3px 10px;border-radius:20px;display:inline-flex;align-items:center;gap:6px;">
+            ${d}
+            ${currentRole==='admin'?`<span onclick="deleteWorkDay('${id}','${d}')" style="cursor:pointer;color:var(--red);font-size:14px;line-height:1;">×</span>`:''}
+          </span>`).join('')}
+      </div>
+    </div>` : '';
+
   document.getElementById('modalJobTitle').textContent = `${job.jobNo} — ${job.customer||'ไม่ระบุลูกค้า'}`;
   document.getElementById('modalJobContent').innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;font-size:13px;">
-      <div><span style="color:var(--text3);">วันที่:</span> ${job.date}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;font-size:13px;">
+      <div><span style="color:var(--text3);">วันที่สร้าง:</span> ${(job.date||'').split('T')[0]}</div>
       <div><span style="color:var(--text3);">ทีม:</span> ${job.teamName}</div>
       <div><span style="color:var(--text3);">ลูกค้า:</span> ${job.customer||'-'}</div>
       <div><span style="color:var(--text3);">ชื่องาน:</span> ${job.name||'-'}</div>
     </div>
+    ${workDaysHTML}
     <table class="items-table" style="margin-bottom:12px;">
       <thead><tr><th>#</th><th>รายการ</th><th>จำนวน</th><th>คะแนน/ชิ้น</th><th>รวม</th></tr></thead>
       <tbody>
@@ -1120,6 +1229,22 @@ function showJobDetail(id) {
       </div>
       <div class="score-value">${job.finalScore.toLocaleString()}</div>
     </div>`;
+
+  // Actions based on role
+  const actionsEl = document.getElementById('modalJobActions');
+  if(currentRole === 'admin') {
+    actionsEl.innerHTML = `
+      <button class="btn-danger" onclick="deleteCurrentJob()">🗑 ลบใบงาน</button>
+      <div style="flex:1;"></div>
+      <button class="btn-outline" onclick="showAddWorkDay('${id}')">📅 เพิ่มวันทำงาน</button>
+      <button class="btn-success" onclick="showEditJob('${id}')">✏️ แก้ไขใบงาน</button>`;
+  } else {
+    actionsEl.innerHTML = `
+      <div style="flex:1;"></div>
+      <button class="btn-outline" onclick="closeModal('modalJobDetail')">ปิด</button>
+      <button class="btn-success" onclick="showAddWorkDay('${id}')">📅 เพิ่มวันทำงาน</button>`;
+  }
+  // Staff should not see delete button - it's already handled above
   document.getElementById('modalJobDetail').classList.add('show');
 }
 
@@ -1130,6 +1255,176 @@ async function deleteCurrentJob() {
   closeModal('modalJobDetail');
   renderJobList();
   showToast('🗑 ลบใบงานแล้ว');
+}
+
+// ── WORK DAYS ──
+function showAddWorkDay(jobId) {
+  currentJobId = jobId;
+  const job = jobs.find(j=>j.id===jobId);
+  document.getElementById('addWorkDayJobInfo').textContent = `Job: ${job.jobNo} — ${job.customer||job.name||'ไม่ระบุ'}`;
+  document.getElementById('workDayDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('modalAddWorkDay').classList.add('show');
+}
+
+async function saveWorkDay() {
+  const date = document.getElementById('workDayDate').value;
+  if(!date) { showToast('⚠️ กรุณาเลือกวันที่'); return; }
+  const job = jobs.find(j=>j.id===currentJobId);
+  if(!job) return;
+  if(!job.workDays) job.workDays = [];
+  if(job.workDays.includes(date)) { showToast('⚠️ วันนี้มีอยู่แล้ว'); return; }
+  job.workDays.push(date);
+  await apiSaveJob(job);
+  closeModal('modalAddWorkDay');
+  showJobDetail(currentJobId);
+  showToast('✅ เพิ่มวันทำงานแล้ว');
+}
+
+async function deleteWorkDay(jobId, date) {
+  if(!confirm(`ต้องการลบวันที่ ${date} ออก?`)) return;
+  const job = jobs.find(j=>j.id===jobId);
+  if(!job) return;
+  job.workDays = (job.workDays||[]).filter(d=>d!==date);
+  await apiSaveJob(job);
+  showJobDetail(jobId);
+  showToast('🗑 ลบวันทำงานแล้ว');
+}
+
+// ── EDIT JOB (Admin) ──
+let editItems = [];
+
+function filterEditTeamDropdown() {
+  const q = document.getElementById('editTeamSearch').value.toLowerCase();
+  const list = document.getElementById('editTeamList');
+  const filtered = teams.filter(t=>t.name.toLowerCase().includes(q));
+  list.innerHTML = filtered.map(t=>`<div class="dropdown-item" onmousedown="selectEditTeam('${t.id}','${t.name}')">${t.name}</div>`).join('');
+  showDropdown('editTeamList');
+}
+
+function selectEditTeam(id, name) {
+  document.getElementById('editTeamSearch').value = name;
+  document.getElementById('editTeamValue').value = id;
+  document.getElementById('editTeamList').classList.remove('show');
+}
+
+function filterEditServiceDropdown() {
+  const q = document.getElementById('editServiceSearch').value.toLowerCase();
+  const list = document.getElementById('editServiceList');
+  if(!q) { list.classList.remove('show'); return; }
+  const filtered = services.filter(s=>s.name.toLowerCase().includes(q)||s.type.toLowerCase().includes(q)).slice(0,30);
+  list.innerHTML = filtered.map(s=>`
+    <div class="dropdown-item" onmousedown="selectEditService('${s.id}','${s.name}',${s.points},'${s.type}')">
+      <div><span class="type-badge">${s.type}</span><span style="margin-left:6px;">${s.name}</span></div>
+      <span class="pts">${s.points} pts</span>
+    </div>`).join('');
+  list.classList.add('show');
+}
+
+function selectEditService(id, name, pts, type) {
+  document.getElementById('editServiceSearch').value = `[${type}] ${name}`;
+  document.getElementById('editServiceValue').value = id;
+  document.getElementById('editServicePoints').value = pts;
+  document.getElementById('editServiceList').classList.remove('show');
+}
+
+function addEditItem() {
+  const svcId = document.getElementById('editServiceValue').value;
+  const pts = parseInt(document.getElementById('editServicePoints').value)||0;
+  const qty = parseInt(document.getElementById('editItemQty').value)||1;
+  const svc = services.find(s=>s.id===svcId);
+  if(!svc) { showToast('⚠️ กรุณาเลือกรายการงานก่อน'); return; }
+  editItems.push({id:genId(), svcId:svc.id, type:svc.type, name:svc.name, pts, qty});
+  document.getElementById('editServiceSearch').value='';
+  document.getElementById('editServiceValue').value='';
+  document.getElementById('editServicePoints').value='';
+  document.getElementById('editItemQty').value=1;
+  renderEditItems();
+}
+
+function removeEditItem(id) {
+  editItems = editItems.filter(i=>i.id!==id);
+  renderEditItems();
+}
+
+function updateEditQty(id, qty) {
+  const item = editItems.find(i=>i.id===id);
+  if(item) { item.qty = parseInt(qty)||1; renderEditItems(); }
+}
+
+function calcEditScore() {
+  const serviceItems = editItems.filter(i=>i.type.startsWith('SERVICE'));
+  const totalServiceUnits = serviceItems.reduce((a,b)=>a+b.qty,0);
+  let discount = 0;
+  if(totalServiceUnits >= 11) discount = 0.15;
+  else if(totalServiceUnits >= 6) discount = 0.10;
+  else if(totalServiceUnits >= 3) discount = 0.05;
+  let rawTotal = editItems.reduce((a,b)=>a+(b.pts*b.qty),0);
+  let serviceRaw = serviceItems.reduce((a,b)=>a+(b.pts*b.qty),0);
+  let nonServiceRaw = rawTotal - serviceRaw;
+  let finalTotal = nonServiceRaw + Math.round(serviceRaw*(1-discount));
+  return { rawTotal, finalTotal, discount, totalServiceUnits };
+}
+
+function renderEditItems() {
+  const { rawTotal, finalTotal, discount, totalServiceUnits } = calcEditScore();
+  document.getElementById('editItemsBody').innerHTML = editItems.map((item,i)=>`
+    <tr>
+      <td style="color:var(--text3);">${i+1}</td>
+      <td><span style="font-size:11px;color:var(--accent2)">${item.type}</span><br>${item.name}</td>
+      <td><input type="number" value="${item.qty}" min="1" max="99"
+        onchange="updateEditQty('${item.id}',this.value)"
+        style="width:56px;padding:4px 6px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--sans);"></td>
+      <td class="pts-cell">${item.pts.toLocaleString()}</td>
+      <td class="pts-cell">${(item.pts*item.qty).toLocaleString()}</td>
+      <td><button class="btn-icon" onclick="removeEditItem('${item.id}')">✕</button></td>
+    </tr>`).join('');
+  document.getElementById('editScoreDetail').textContent =
+    discount>0 ? `Service ${totalServiceUnits} ชุด (ลด ${discount*100}%) | ก่อนลด ${rawTotal.toLocaleString()}` : `${editItems.length} รายการ`;
+  document.getElementById('editDiscountTag').innerHTML =
+    discount>0 ? `<span class="discount-tag">ลด ${discount*100}%</span>` : '';
+  document.getElementById('editScoreFinal').textContent = finalTotal.toLocaleString();
+}
+
+function showEditJob(id) {
+  const job = jobs.find(j=>j.id===id);
+  if(!job) return;
+  currentJobId = id;
+  editItems = job.items.map(i=>({...i}));
+  document.getElementById('editJobDate').value = job.date;
+  document.getElementById('editJobName').value = job.name||'';
+  document.getElementById('editJobCustomer').value = job.customer||'';
+  document.getElementById('editTeamSearch').value = job.teamName;
+  document.getElementById('editTeamValue').value = job.teamId;
+  // init team dropdown
+  const list = document.getElementById('editTeamList');
+  list.innerHTML = teams.map(t=>`<div class="dropdown-item" onmousedown="selectEditTeam('${t.id}','${t.name}')">${t.name}</div>`).join('');
+  renderEditItems();
+  closeModal('modalJobDetail');
+  document.getElementById('modalEditJob').classList.add('show');
+}
+
+async function saveEditJob() {
+  const date = document.getElementById('editJobDate').value;
+  const teamId = document.getElementById('editTeamValue').value;
+  const teamName = document.getElementById('editTeamSearch').value;
+  if(!date) { showToast('⚠️ กรุณาเลือกวันที่'); return; }
+  if(!teamId) { showToast('⚠️ กรุณาเลือกทีมช่าง'); return; }
+  if(editItems.length===0) { showToast('⚠️ กรุณามีรายการงานอย่างน้อย 1 รายการ'); return; }
+  const { finalTotal, rawTotal, discount } = calcEditScore();
+  const job = jobs.find(j=>j.id===currentJobId);
+  job.date = date;
+  job.name = document.getElementById('editJobName').value;
+  job.customer = document.getElementById('editJobCustomer').value;
+  job.teamId = teamId;
+  job.teamName = teamName;
+  job.items = [...editItems];
+  job.rawScore = rawTotal;
+  job.finalScore = finalTotal;
+  job.discount = discount;
+  await apiSaveJob(job);
+  closeModal('modalEditJob');
+  renderJobList();
+  showToast('✅ แก้ไขใบงานสำเร็จ');
 }
 
 // ── DASHBOARD ──
