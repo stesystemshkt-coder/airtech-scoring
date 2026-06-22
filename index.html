@@ -1124,7 +1124,14 @@ function showPage(id) {
   if(id==='pageJobList') renderJobList();
   if(id==='pageDashboard') renderDashboard();
   if(id==='pageSettings') renderSettings();
-  if(id==='pageProject') renderProjectPage();
+  if(id==='pageProject') { 
+    if(projects.length === 0 && jobs.length > 0) {
+      // data loaded but projects empty - try reload
+      loadData().then(() => renderProjectPage());
+    } else {
+      renderProjectPage();
+    }
+  }
 }
 
 // ── NEW JOB FORM ──
@@ -2151,7 +2158,10 @@ async function deleteProject(id) {
 function renderProjectNamesList() {
   const el = document.getElementById('projectNamesList');
   if(!el) return;
-  if(projects.length === 0) { el.innerHTML = `<div class="empty"><div class="empty-icon">🏗️</div><p>ยังไม่มีโปรเจ็ค</p></div>`; return; }
+  if(!projects || projects.length === 0) { 
+    el.innerHTML = `<div class="empty"><div class="empty-icon">🏗️</div><p>ยังไม่มีโปรเจ็ค — กด "+ เพิ่มโปรเจ็ค"</p></div>`; 
+    return; 
+  }
   el.innerHTML = projects.map(p => {
     const pts = teamDailyPoints.filter(t => t.projectId === p.id);
     return `
@@ -2464,7 +2474,11 @@ function renderTeamDailyPointsList() {
 
 // ── INIT ──
 loadData().then(() => {
-  // init UI after data loaded - nothing extra needed
+  // Re-render project page if it's active
+  const projectPage = document.getElementById('pageProject');
+  if(projectPage && projectPage.classList.contains('active')) {
+    renderProjectPage();
+  }
 });
 </script>
 </body>
