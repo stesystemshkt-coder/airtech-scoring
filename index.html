@@ -1931,17 +1931,17 @@ async function recalcProjectScores(teamId, teamName, date, excludeJobId='') {
   const tdpEntries = teamDailyPoints.filter(t => String(t.teamId) === String(teamId) && t.month === month);
   const dailyPoints = tdpEntries.reduce((a,b) => a + (Number(b.pointsPerDay)||0), 0);
   if(!dailyPoints) return;
+  // Sum ALL job scores for this team+date (including current job - it's already in jobs array)
   const jobPoints = jobs
-    .filter(j => String(j.teamId) === String(teamId) && (j.date||'').split('T')[0] === date && j.id !== excludeJobId)
+    .filter(j => String(j.teamId) === String(teamId) && (j.date||'').split('T')[0] === date)
     .reduce((a,b) => {
-      // Use jobScore if available, otherwise calculate from items
       const js = Number(b.jobScore) || b.items.reduce((s,i) => s+(Number(i.pts)*Number(i.qty||1)),0);
       return a + js;
     }, 0);
   const totalProjectScore = Math.max(0, dailyPoints - jobPoints);
 
-  // Get all projectJobs for this team+date from jobs
-  const allJobsToday = jobs.filter(j => j.teamId === teamId && (j.date||'').split('T')[0] === date);
+  // Get all projectJobs for this team+date from jobs (including current job just saved)
+  const allJobsToday = jobs.filter(j => String(j.teamId) === String(teamId) && (j.date||'').split('T')[0] === date);
   const allProjects = [];
   allJobsToday.forEach(j => { (j.projects||[]).forEach(p => allProjects.push({jobId:j.id, name:p})); });
   const totalProjects = allProjects.length;
