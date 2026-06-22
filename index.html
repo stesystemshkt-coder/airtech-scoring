@@ -659,14 +659,19 @@
   </div>
 </div>
 
-<!-- MODAL: Add Project Name -->
+<!-- MODAL: Add/Edit Project -->
 <div class="modal-overlay" id="modalAddProject">
-  <div class="modal" style="width:400px;">
+  <div class="modal" style="width:560px;max-height:90vh;overflow-y:auto;">
     <h3 id="modalProjectTitle">+ เพิ่มโปรเจ็ค</h3>
     <div class="field" style="margin-bottom:16px;">
       <label>ชื่อโปรเจ็ค</label>
       <input type="text" id="projectNameInput" placeholder="เช่น The White Ginger">
     </div>
+
+    <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:8px;">คะแนนรายวันต่อทีม</div>
+    <div id="projectTeamPointsRows"></div>
+    <button class="btn-outline" onclick="addProjectTeamRow()" style="width:100%;margin-top:8px;margin-bottom:16px;">+ เพิ่มทีม</button>
+
     <input type="hidden" id="projectEditId">
     <div class="modal-actions">
       <button class="btn-outline" onclick="closeModal('modalAddProject')">ยกเลิก</button>
@@ -910,7 +915,7 @@ let currentItems = []; // items in new job form
 let currentJobProjects = []; // projects in new job form
 
 // ── GOOGLE SHEETS BACKEND ──
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbzyksb29hfYSpVfg9Eym65Ay54318aqcWr8oUjq9YjPMSX_EpkMoWncxfYIu-taHFBrog/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxOUIpWcYD6-KOvJwWT5_hvcXCLD5hhchEjn9l-gznYqJ4kZ9OV1xDStE8IclF-DaWA3A/exec';
 
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
 
@@ -1237,6 +1242,7 @@ function calcScore() {
   let totalProjectScore = 0;
   if(currentJobProjects.length > 0 && teamId && date) {
     const month = date.slice(0,7);
+    // Find matching teamDailyPoints - try project-linked first, then generic
     const tdp = teamDailyPoints.find(t => t.teamId === teamId && t.month === month);
     if(tdp) {
       const dailyPoints = Number(tdp.pointsPerDay) || 0;
@@ -1303,6 +1309,7 @@ function renderJobItems() {
     const teamId = document.getElementById('teamValue').value;
     const date = document.getElementById('jobDate').value;
     const month = (date||'').slice(0,7);
+    // Find matching teamDailyPoints - try project-linked first, then generic
     const tdp = teamDailyPoints.find(t => t.teamId === teamId && t.month === month);
     if(!tdp) {
       breakdownHTML += `<div style="font-size:12px;color:var(--yellow);margin-bottom:4px;">⚠️ ยังไม่ได้กำหนดคะแนนรายวันเดือนนี้</div>`;
@@ -2006,33 +2013,134 @@ function renderEditJobProjectTags() {
     </span>`).join('');
 }
 
-// Project names management
+// Project management (combined name + team points)
+let projectTeamRows = []; // temp rows in modal
+
+function addProjectTeamRow(teamId='', teamName='', month='', pts='') {
+  const rowId = genId();
+  projectTeamRows.push({ rowId, teamId, teamName, month, pts });
+  renderProjectTeamRows();
+}
+
+function removeProjectTeamRow(rowId) {
+  projectTeamRows = projectTeamRows.filter(r => r.rowId !== rowId);
+  renderProjectTeamRows();
+}
+
+function renderProjectTeamRows() {
+  const el = document.getElementById('projectTeamPointsRows');
+  if(!el) return;
+  if(projectTeamRows.length === 0) {
+    el.innerHTML = `<div style="font-size:13px;color:var(--text3);padding:8px 0;">ยังไม่มีทีม — กด "+ เพิ่มทีม" ด้านล่าง</div>`;
+    return;
+  }
+  el.innerHTML = projectTeamRows.map(row => `
+    <div style="display:grid;grid-template-columns:1fr 1fr auto auto;gap:8px;align-items:center;margin-bottom:8px;">
+      <div class="search-dropdown">
+        <input type="text" placeholder="ค้นหาทีม..." value="${row.teamName}"
+          id="prow_team_${row.rowId}" autocomplete="off"
+          oninput="filterPRowTeam('${row.rowId}')"
+          onfocus="showDropdown('prow_list_${row.rowId}')"
+          onblur="hideDropdown('prow_list_${row.rowId}',300)"
+          style="width:100%;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--sans);font-size:13px;outline:none;">
+        <input type="hidden" id="prow_teamid_${row.rowId}" value="${row.teamId}">
+        <div class="dropdown-list" id="prow_list_${row.rowId}"></div>
+      </div>
+      <input type="month" value="${row.month}" id="prow_month_${row.rowId}"
+        onchange="updatePRow('${row.rowId}')"
+        style="padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--sans);font-size:13px;outline:none;">
+      <input type="number" value="${row.pts}" placeholder="pts/วัน" id="prow_pts_${row.rowId}"
+        onchange="updatePRow('${row.rowId}')" min="0"
+        style="width:100px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--sans);font-size:13px;outline:none;">
+      <button class="btn-icon" onclick="removeProjectTeamRow('${row.rowId}')" style="color:var(--red);">✕</button>
+    </div>`).join('');
+}
+
+function filterPRowTeam(rowId) {
+  const q = document.getElementById(`prow_team_${rowId}`).value.toLowerCase();
+  const list = document.getElementById(`prow_list_${rowId}`);
+  const filtered = teams.filter(t => t.name.toLowerCase().includes(q));
+  list.innerHTML = filtered.map(t => `<div class="dropdown-item" onmousedown="selectPRowTeam('${rowId}','${t.id}','${t.name}')">${t.name}</div>`).join('');
+  list.classList.add('show');
+}
+
+function selectPRowTeam(rowId, teamId, teamName) {
+  document.getElementById(`prow_team_${rowId}`).value = teamName;
+  document.getElementById(`prow_teamid_${rowId}`).value = teamId;
+  document.getElementById(`prow_list_${rowId}`).classList.remove('show');
+  const row = projectTeamRows.find(r => r.rowId === rowId);
+  if(row) { row.teamId = teamId; row.teamName = teamName; }
+}
+
+function updatePRow(rowId) {
+  const row = projectTeamRows.find(r => r.rowId === rowId);
+  if(!row) return;
+  row.month = document.getElementById(`prow_month_${rowId}`)?.value || '';
+  row.pts = document.getElementById(`prow_pts_${rowId}`)?.value || '';
+}
+
 function showAddProject() {
   document.getElementById('modalProjectTitle').textContent = '+ เพิ่มโปรเจ็ค';
   document.getElementById('projectNameInput').value = '';
   document.getElementById('projectEditId').value = '';
+  projectTeamRows = [];
+  renderProjectTeamRows();
+  // Add one empty row by default
+  addProjectTeamRow('','',new Date().toISOString().slice(0,7),'');
   document.getElementById('modalAddProject').classList.add('show');
 }
+
 function editProject(id) {
   const p = projects.find(p => p.id === id);
   if(!p) return;
   document.getElementById('modalProjectTitle').textContent = '✏️ แก้ไขโปรเจ็ค';
   document.getElementById('projectNameInput').value = p.name;
   document.getElementById('projectEditId').value = id;
+  // Load existing team points for this project
+  projectTeamRows = [];
+  const existing = teamDailyPoints.filter(t => t.projectId === id);
+  if(existing.length > 0) {
+    existing.forEach(t => addProjectTeamRow(t.teamId, t.teamName, t.month, t.pointsPerDay));
+  } else {
+    addProjectTeamRow('','',new Date().toISOString().slice(0,7),'');
+  }
   document.getElementById('modalAddProject').classList.add('show');
 }
+
 async function saveProject() {
   const name = document.getElementById('projectNameInput').value.trim();
   const editId = document.getElementById('projectEditId').value;
   if(!name) { showToast('⚠️ กรุณากรอกชื่อโปรเจ็ค'); return; }
-  const proj = { id: editId||genId(), name };
+
+  // Collect all row values first
+  projectTeamRows.forEach(row => {
+    row.teamId = document.getElementById(`prow_teamid_${row.rowId}`)?.value || row.teamId;
+    row.teamName = document.getElementById(`prow_team_${row.rowId}`)?.value || row.teamName;
+    row.month = document.getElementById(`prow_month_${row.rowId}`)?.value || row.month;
+    row.pts = document.getElementById(`prow_pts_${row.rowId}`)?.value || row.pts;
+  });
+
+  const projId = editId || genId();
+  const proj = { id: projId, name };
   await api({ action: 'saveProject', data: JSON.stringify(proj) });
   if(editId) { projects = projects.map(p => p.id===editId ? proj : p); }
   else { projects.push(proj); }
+
+  // Save team daily points linked to this project
+  for(const row of projectTeamRows) {
+    if(!row.teamId || !row.month || !row.pts) continue;
+    const tdp = { id: genId(), teamId: row.teamId, teamName: row.teamName, month: row.month, pointsPerDay: parseInt(row.pts)||0, projectId: projId, projectName: name };
+    await apiSaveTeamDailyPoints(tdp);
+    // Update local
+    const existing = teamDailyPoints.find(t => t.teamId===row.teamId && t.month===row.month && t.projectId===projId);
+    if(existing) { Object.assign(existing, tdp); } else { teamDailyPoints.push(tdp); }
+  }
+
   closeModal('modalAddProject');
-  renderProjectNamesList();
+  renderProjectPage();
   showToast('✅ บันทึกโปรเจ็คสำเร็จ');
 }
+
 async function deleteProject(id) {
   if(!confirm('ต้องการลบโปรเจ็คนี้?')) return;
   await api({ action: 'deleteProject', id });
@@ -2040,24 +2148,37 @@ async function deleteProject(id) {
   renderProjectNamesList();
   showToast('🗑 ลบโปรเจ็คแล้ว');
 }
+
 function renderProjectNamesList() {
   const el = document.getElementById('projectNamesList');
   if(!el) return;
   if(projects.length === 0) { el.innerHTML = `<div class="empty"><div class="empty-icon">🏗️</div><p>ยังไม่มีโปรเจ็ค</p></div>`; return; }
-  el.innerHTML = projects.map(p => `
-    <div class="settings-item">
-      <div class="settings-name">🏗️ ${p.name}</div>
-      <div class="settings-actions">
-        <button class="btn-sm" onclick="editProject('${p.id}')">แก้ไข</button>
-        <button class="btn-sm" onclick="deleteProject('${p.id}')" style="color:var(--red);">ลบ</button>
+  el.innerHTML = projects.map(p => {
+    const pts = teamDailyPoints.filter(t => t.projectId === p.id);
+    return `
+    <div style="border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${pts.length>0?'8px':'0'};">
+        <div style="font-size:15px;font-weight:600;">🏗️ ${p.name}</div>
+        <div class="settings-actions">
+          <button class="btn-sm" onclick="editProject('${p.id}')">แก้ไข</button>
+          <button class="btn-sm" onclick="deleteProject('${p.id}')" style="color:var(--red);">ลบ</button>
+        </div>
       </div>
-    </div>`).join('');
+      ${pts.length>0?`<div style="display:flex;flex-wrap:wrap;gap:6px;">
+        ${pts.map(t=>`<span style="font-size:12px;background:rgba(59,130,246,0.1);color:var(--accent);padding:2px 8px;border-radius:4px;">${t.teamName} ${t.month}: ${Number(t.pointsPerDay).toLocaleString()} pts/วัน</span>`).join('')}
+      </div>`:''}
+    </div>`}).join('');
 }
 
 function renderProjectPage() {
-  renderTeamDailyPointsList();
   renderProjectNamesList();
   renderProjectSummary();
+  // hide old team daily points section if exists
+  const tdpSection = document.getElementById('teamDailyPointsList');
+  if(tdpSection && tdpSection.closest('.card')) {
+    const card = tdpSection.closest('.card');
+    // only hide if it's the standalone card (not inside project)
+  }
 }
 
 function renderProjectSummary() {
