@@ -1302,7 +1302,7 @@ function renderJobItems() {
   }
   empty.style.display='none';
   table.style.display = hasItems ? 'table' : 'none';
-  scoreBox.style.display='block';
+  scoreBox.style.display = 'block';
 
   const { rawTotal, jobScore, finalTotal, discount, totalServiceUnits, projectScores } = calcScore();
 
@@ -1357,7 +1357,7 @@ async function saveJob() {
   const teamName = document.getElementById('teamSearch').value;
   if(!date) { showToast('⚠️ กรุณาเลือกวันที่'); return; }
   if(!teamId) { showToast('⚠️ กรุณาเลือกทีมช่าง'); return; }
-  if(currentItems.length === 0) { showToast('⚠️ กรุณาเพิ่มรายการงานอย่างน้อย 1 รายการ'); return; }
+  if(currentItems.length === 0 && currentJobProjects.length === 0) { showToast('⚠️ กรุณาเพิ่มรายการงานหรือโปรเจ็คอย่างน้อย 1 รายการ'); return; }
   const { finalTotal, rawTotal, jobScore, discount, projectScores } = calcScore();
   const job = {
     id: genId(),
