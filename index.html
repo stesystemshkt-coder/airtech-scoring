@@ -1688,7 +1688,8 @@ function calcEditScoreWithProjects() {
 
   // Calc project scores
   const teamId = document.getElementById('editTeamValue').value;
-  const date = document.getElementById('editJobDate').value;
+  const rawDate = document.getElementById('editJobDate').value;
+  const date = normalizeDate(rawDate);
   let projectScores = [];
   let totalProjectScore = 0;
   const editJobId = document.getElementById('editJobId')?.value || '';
@@ -1716,7 +1717,7 @@ function showEditJob(id) {
   if(!job) return;
   currentJobId = id;
   editItems = job.items.map(i=>({...i}));
-  document.getElementById('editJobDate').value = job.date;
+  document.getElementById('editJobDate').value = normalizeDate(job.date);
   document.getElementById('editJobName').value = job.name||'';
   document.getElementById('editJobCustomer').value = job.customer||'';
   document.getElementById('editTeamSearch').value = job.teamName;
@@ -1727,9 +1728,10 @@ function showEditJob(id) {
   // init team dropdown
   const list = document.getElementById('editTeamList');
   list.innerHTML = teams.map(t=>`<div class="dropdown-item" onmousedown="selectEditTeam('${t.id}','${t.name}')">${t.name}</div>`).join('');
-  renderEditItems();
   closeModal('modalJobDetail');
   document.getElementById('modalEditJob').classList.add('show');
+  // Render after modal shows so DOM values are ready
+  setTimeout(() => renderEditItems(), 50);
 }
 
 async function saveEditJob() {
