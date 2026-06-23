@@ -778,17 +778,18 @@
       </div>
     </div>
 
-    <div class="score-box" id="editScoreBox">
-      <div>
-        <div class="score-label">คะแนนรวมทีม</div>
-        <div class="score-detail" id="editScoreDetail"></div>
-      </div>
-      <div style="text-align:right;">
-        <div id="editDiscountTag"></div>
-        <div class="score-value" id="editScoreFinal">0</div>
+    <div id="editScoreBox" style="background:linear-gradient(135deg,rgba(59,130,246,0.08),rgba(34,211,238,0.04));border:1px solid rgba(59,130,246,0.25);border-radius:10px;padding:14px 16px;margin-top:12px;">
+      <div id="editScoreBreakdown"></div>
+      <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px;display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:13px;color:var(--text2);font-weight:600;">คะแนนรวมทีม</div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div id="editDiscountTag"></div>
+          <div class="score-value" id="editScoreFinal">0</div>
+        </div>
       </div>
     </div>
 
+    <input type="hidden" id="editJobId">
     <div class="modal-actions">
       <button class="btn-outline" onclick="closeModal('modalEditJob')">ยกเลิก</button>
       <button class="btn-success" onclick="saveEditJob()">💾 บันทึกการแก้ไข</button>
@@ -1634,7 +1635,7 @@ function calcEditScore() {
 }
 
 function renderEditItems() {
-  const { rawTotal, finalTotal, discount, totalServiceUnits } = calcEditScore();
+  const { rawTotal, jobScore, finalTotal, discount, totalServiceUnits, projectScores } = calcEditScoreWithProjects();
   document.getElementById('editItemsBody').innerHTML = editItems.map((item,i)=>`
     <tr>
       <td style="color:var(--text3);">${i+1}</td>
@@ -1648,11 +1649,66 @@ function renderEditItems() {
       <td class="pts-cell">${(item.pts*item.qty).toLocaleString()}</td>
       <td><button class="btn-icon" onclick="removeEditItem('${item.id}')">✕</button></td>
     </tr>`).join('');
-  document.getElementById('editScoreDetail').textContent =
-    discount>0 ? `Service ${totalServiceUnits} ชุด (ลด ${discount*100}%) | ก่อนลด ${rawTotal.toLocaleString()}` : `${editItems.length} รายการ`;
-  document.getElementById('editDiscountTag').innerHTML =
-    discount>0 ? `<span class="discount-tag">ลด ${discount*100}%</span>` : '';
+
+  // Build breakdown
+  let breakdownHTML = '';
+  if(editItems.length > 0) {
+    breakdownHTML += `<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
+      <span style="color:var(--text2);">งานปกติ${discount>0?' (ลด '+discount*100+'%)':''}</span>
+      <span style="font-family:var(--mono);color:var(--text);">${jobScore.toLocaleString()} pts</span>
+    </div>`;
+  }
+  if(projectScores && projectScores.length > 0) {
+    projectScores.forEach(p => {
+      breakdownHTML += `<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
+        <span style="color:var(--accent2);">🏗️ ${p.name}</span>
+        <span style="font-family:var(--mono);color:var(--accent2);">${p.score.toLocaleString()} pts ⚡</span>
+      </div>`;
+    });
+  } else if(editJobProjects.length > 0) {
+    breakdownHTML += `<div style="font-size:12px;color:var(--yellow);margin-bottom:4px;">⚠️ ยังไม่ได้กำหนดคะแนนรายวันเดือนนี้</div>`;
+  }
+  document.getElementById('editScoreBreakdown').innerHTML = breakdownHTML;
+  document.getElementById('editDiscountTag').innerHTML = '';
   document.getElementById('editScoreFinal').textContent = finalTotal.toLocaleString();
+}
+
+function calcEditScoreWithProjects() {
+  // Calc job score
+  const serviceItems = editItems.filter(i=>i.type.startsWith('SERVICE'));
+  const totalServiceUnits = serviceItems.reduce((a,b)=>a+b.qty,0);
+  let discount = 0;
+  if(totalServiceUnits >= 11) discount = 0.15;
+  else if(totalServiceUnits >= 6) discount = 0.10;
+  else if(totalServiceUnits >= 3) discount = 0.05;
+  let rawTotal = editItems.reduce((a,b)=>a+(b.pts*b.qty),0);
+  let serviceRaw = serviceItems.reduce((a,b)=>a+(b.pts*b.qty),0);
+  let nonServiceRaw = rawTotal - serviceRaw;
+  let jobScore = nonServiceRaw + Math.round(serviceRaw*(1-discount));
+
+  // Calc project scores
+  const teamId = document.getElementById('editTeamValue').value;
+  const date = document.getElementById('editJobDate').value;
+  let projectScores = [];
+  let totalProjectScore = 0;
+  const editJobId = document.getElementById('editJobId')?.value || '';
+  if(editJobProjects.length > 0 && teamId && date) {
+    const month = date.slice(0,7);
+    const tdpEntries = teamDailyPoints.filter(t => String(t.teamId) === String(teamId) && t.month === month);
+    const dailyPoints = tdpEntries.reduce((a,b) => a+(Number(b.pointsPerDay)||0), 0);
+    if(dailyPoints > 0) {
+      const otherJobsScore = jobs
+        .filter(j => String(j.teamId) === String(teamId) && (j.date||'').split('T')[0] === date && j.id !== editJobId)
+        .reduce((a,b) => a+(Number(b.jobScore||0)),0);
+      const totalProjectPool = Math.max(0, dailyPoints - jobScore - otherJobsScore);
+      const perProject = editJobProjects.length > 0 ? Math.round(totalProjectPool / editJobProjects.length) : totalProjectPool;
+      projectScores = editJobProjects.map(name => ({ name, score: perProject }));
+      totalProjectScore = totalProjectPool;
+    }
+  }
+
+  const finalTotal = jobScore + totalProjectScore;
+  return { rawTotal, jobScore, finalTotal, discount, totalServiceUnits, projectScores };
 }
 
 function showEditJob(id) {
@@ -1667,6 +1723,7 @@ function showEditJob(id) {
   document.getElementById('editTeamValue').value = job.teamId;
   editJobProjects = [...(job.projects||[])];
   renderEditJobProjectTags();
+  document.getElementById('editJobId').value = job.id;
   // init team dropdown
   const list = document.getElementById('editTeamList');
   list.innerHTML = teams.map(t=>`<div class="dropdown-item" onmousedown="selectEditTeam('${t.id}','${t.name}')">${t.name}</div>`).join('');
@@ -2051,13 +2108,14 @@ function filterEditJobProjectDropdown() {
   if(filtered.length > 0) list.classList.add('show'); else list.classList.remove('show');
 }
 function addEditJobProject(name) {
-  if(!editJobProjects.includes(name)) { editJobProjects.push(name); renderEditJobProjectTags(); }
+  if(!editJobProjects.includes(name)) { editJobProjects.push(name); renderEditJobProjectTags(); renderEditItems(); }
   document.getElementById('editJobProjectSearch').value = '';
   document.getElementById('editJobProjectList').classList.remove('show');
 }
 function removeEditJobProject(name) {
   editJobProjects = editJobProjects.filter(p => p !== name);
   renderEditJobProjectTags();
+  renderEditItems();
 }
 function renderEditJobProjectTags() {
   const el = document.getElementById('editJobProjectTags');
