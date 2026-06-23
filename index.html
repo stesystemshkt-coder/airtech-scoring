@@ -1740,7 +1740,7 @@ async function saveEditJob() {
   const teamName = document.getElementById('editTeamSearch').value;
   if(!date) { showToast('⚠️ กรุณาเลือกวันที่'); return; }
   if(!teamId) { showToast('⚠️ กรุณาเลือกทีมช่าง'); return; }
-  if(editItems.length===0) { showToast('⚠️ กรุณามีรายการงานอย่างน้อย 1 รายการ'); return; }
+  if(editItems.length===0 && editJobProjects.length===0) { showToast('⚠️ กรุณาเพิ่มรายการงานหรือโปรเจ็คอย่างน้อย 1 รายการ'); return; }
   const { finalTotal, rawTotal, discount } = calcEditScore();
   const job = jobs.find(j=>j.id===currentJobId);
   job.date = date;
