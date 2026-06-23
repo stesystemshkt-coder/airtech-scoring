@@ -1614,6 +1614,11 @@ function updateEditQty(id, qty) {
   if(item) { item.qty = parseInt(qty)||1; renderEditItems(); }
 }
 
+function updateEditPts(id, pts) {
+  const item = editItems.find(i=>i.id===id);
+  if(item) { item.pts = parseInt(pts)||0; renderEditItems(); }
+}
+
 function calcEditScore() {
   const serviceItems = editItems.filter(i=>i.type.startsWith('SERVICE'));
   const totalServiceUnits = serviceItems.reduce((a,b)=>a+b.qty,0);
@@ -1637,7 +1642,9 @@ function renderEditItems() {
       <td><input type="number" value="${item.qty}" min="1" max="99"
         onchange="updateEditQty('${item.id}',this.value)"
         style="width:56px;padding:4px 6px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--sans);"></td>
-      <td class="pts-cell">${item.pts.toLocaleString()}</td>
+      <td><input type="number" value="${item.pts}" min="0"
+        onchange="updateEditPts('${item.id}',this.value)"
+        style="width:80px;padding:4px 6px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--accent2);font-family:var(--mono);font-weight:500;"></td>
       <td class="pts-cell">${(item.pts*item.qty).toLocaleString()}</td>
       <td><button class="btn-icon" onclick="removeEditItem('${item.id}')">✕</button></td>
     </tr>`).join('');
