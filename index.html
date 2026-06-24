@@ -1273,8 +1273,8 @@ function calcScore() {
   if(currentJobProjects.length > 0 && teamId && date) {
     const month = date.slice(0,7);
     // Find all daily points for this team+month
-    const tdpEntries2 = teamDailyPoints.filter(t => String(t.teamId) === String(teamId) && t.month === month);
-    const dailyPoints = tdpEntries2.reduce((a,b) => a + (Number(b.pointsPerDay)||0), 0);
+    const tdp1 = teamDailyPoints.find(t => String(t.teamId) === String(teamId) && t.month === month);
+    const dailyPoints = tdp1 ? Number(tdp1.pointsPerDay) : 0;
     if(dailyPoints > 0) {
       const otherJobsScore = jobs
         .filter(j => String(j.teamId) === String(teamId) && (j.date||'').split('T')[0] === date)
@@ -1339,8 +1339,7 @@ function renderJobItems() {
     const date = document.getElementById('jobDate').value;
     const month = (date||'').slice(0,7);
     // Find matching teamDailyPoints by teamId + month
-    const tdpEntries2 = teamDailyPoints.filter(t => t.teamId === teamId && t.month === month);
-    const tdp = tdpEntries2.length > 0 ? { pointsPerDay: tdpEntries2.reduce((a,b) => a + (Number(b.pointsPerDay)||0), 0) } : null;
+    const tdp = teamDailyPoints.find(t => String(t.teamId) === String(teamId) && t.month === month) || null;
     if(!tdp) {
       breakdownHTML += `<div style="font-size:12px;color:var(--yellow);margin-bottom:4px;">⚠️ ยังไม่ได้กำหนดคะแนนรายวันเดือนนี้</div>`;
     }
@@ -1695,8 +1694,8 @@ function calcEditScoreWithProjects() {
   const editJobId = document.getElementById('editJobId')?.value || '';
   if(editJobProjects.length > 0 && teamId && date) {
     const month = date.slice(0,7);
-    const tdpEntries = teamDailyPoints.filter(t => String(t.teamId) === String(teamId) && t.month === month);
-    const dailyPoints = tdpEntries.reduce((a,b) => a+(Number(b.pointsPerDay)||0), 0);
+    const tdpE = teamDailyPoints.find(t => String(t.teamId) === String(teamId) && t.month === month);
+    const dailyPoints = tdpE ? Number(tdpE.pointsPerDay) : 0;
     if(dailyPoints > 0) {
       const otherJobsScore = jobs
         .filter(j => String(j.teamId) === String(teamId) && (j.date||'').split('T')[0] === date && j.id !== editJobId)
@@ -2025,8 +2024,8 @@ function showToast(msg) {
 // Recalculate all project scores for a team on a date
 async function recalcProjectScores(teamId, teamName, date, excludeJobId='', currentJobScore=0) {
   const month = date.slice(0,7);
-  const tdpEntries = teamDailyPoints.filter(t => String(t.teamId) === String(teamId) && t.month === month);
-  const dailyPoints = tdpEntries.reduce((a,b) => a + (Number(b.pointsPerDay)||0), 0);
+  const tdpR = teamDailyPoints.find(t => String(t.teamId) === String(teamId) && t.month === month);
+  const dailyPoints = tdpR ? Number(tdpR.pointsPerDay) : 0;
   if(!dailyPoints) return;
   // Sum ONLY job scores (not finalScore which includes project) for other jobs this team+date
   const otherJobsScore = jobs
