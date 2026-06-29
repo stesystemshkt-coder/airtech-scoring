@@ -451,6 +451,13 @@
             </div>
           </div>
         </div>
+        <div class="field" id="overridePointsWrap" style="margin-bottom:12px;display:none;">
+          <label>คะแนนรายวัน (วันนี้)</label>
+          <input type="number" id="overridePoints" min="0" placeholder="ค่าเริ่มต้นจากที่กำหนดไว้"
+            oninput="renderJobItems()"
+            style="width:100%;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:15px;outline:none;">
+          <div style="font-size:12px;color:var(--text3);margin-top:4px;">ปกติ: <span id="overridePointsDefault">-</span> pts/วัน — แก้ถ้าวันนี้มีคนมาช่วยพิเศษ</div>
+        </div>
       </div>
 
       <div class="card mt-16">
@@ -749,6 +756,13 @@
           oninput="filterEditJobProjectDropdown()" onfocus="showDropdown('editJobProjectList')" onblur="hideDropdown('editJobProjectList',300)">
         <div class="dropdown-list" id="editJobProjectList"></div>
       </div>
+    </div>
+    <div class="field" id="editOverridePointsWrap" style="margin-bottom:12px;display:none;">
+      <label>คะแนนรายวัน (วันนี้)</label>
+      <input type="number" id="editOverridePoints" min="0" placeholder="ค่าเริ่มต้นจากที่กำหนดไว้"
+        oninput="renderEditItems()"
+        style="width:100%;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:15px;outline:none;">
+      <div style="font-size:12px;color:var(--text3);margin-top:4px;">ปกติ: <span id="editOverridePointsDefault">-</span> pts/วัน</div>
     </div>
     <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:8px;">รายการงาน</div>
     <table class="items-table" id="editItemsTable" style="margin-bottom:12px;">
@@ -1218,6 +1232,7 @@ function selectTeam(id, name) {
   document.getElementById('teamSearch').value = name;
   document.getElementById('teamValue').value = id;
   document.getElementById('teamList').classList.remove('show');
+  updateOverridePointsField();
   renderJobItems();
 }
 
@@ -1274,7 +1289,9 @@ function calcScore() {
     const month = date.slice(0,7);
     // Find all daily points for this team+month
     const tdp1 = teamDailyPoints.find(t => String(t.teamId) === String(teamId) && t.month === month);
-    const dailyPoints = tdp1 ? Number(tdp1.pointsPerDay) : 0;
+    const defaultPts = tdp1 ? Number(tdp1.pointsPerDay) : 0;
+    const overrideVal = Number(document.getElementById('overridePoints')?.value) || 0;
+    const dailyPoints = overrideVal > 0 ? overrideVal : defaultPts;
     if(dailyPoints > 0) {
       const otherJobsScore = jobs
         .filter(j => String(j.teamId) === String(teamId) && (j.date||'').split('T')[0] === date)
@@ -1358,6 +1375,7 @@ async function saveJob() {
   if(!teamId) { showToast('⚠️ กรุณาเลือกทีมช่าง'); return; }
   if(currentItems.length === 0 && currentJobProjects.length === 0) { showToast('⚠️ กรุณาเพิ่มรายการงานหรือโปรเจ็คอย่างน้อย 1 รายการ'); return; }
   const { finalTotal, rawTotal, jobScore, discount, projectScores } = calcScore();
+  const overridePts = Number(document.getElementById('overridePoints')?.value) || 0;
   const job = {
     id: genId(),
     jobNo: 'J' + String(jobs.length+1).padStart(4,'0'),
@@ -1371,6 +1389,7 @@ async function saveJob() {
     jobScore: jobScore,
     finalScore: finalTotal,
     discount,
+    overridePoints: overridePts,
     createdAt: new Date().toISOString()
   };
   await apiSaveJob(job);
@@ -1388,6 +1407,10 @@ function resetNewJob() {
   document.getElementById('teamValue').value = '';
   currentJobProjects = [];
   renderJobProjectTags();
+  const op = document.getElementById('overridePoints');
+  if(op) op.value = '';
+  const ow = document.getElementById('overridePointsWrap');
+  if(ow) ow.style.display = 'none';
   document.getElementById('serviceSearch').value = '';
   document.getElementById('serviceValue').value = '';
   document.getElementById('servicePoints').value = '';
@@ -1695,7 +1718,9 @@ function calcEditScoreWithProjects() {
   if(editJobProjects.length > 0 && teamId && date) {
     const month = date.slice(0,7);
     const tdpE = teamDailyPoints.find(t => String(t.teamId) === String(teamId) && t.month === month);
-    const dailyPoints = tdpE ? Number(tdpE.pointsPerDay) : 0;
+    const defaultPtsE = tdpE ? Number(tdpE.pointsPerDay) : 0;
+    const overrideValE = Number(document.getElementById('editOverridePoints')?.value) || 0;
+    const dailyPoints = overrideValE > 0 ? overrideValE : defaultPtsE;
     if(dailyPoints > 0) {
       const otherJobsScore = jobs
         .filter(j => String(j.teamId) === String(teamId) && (j.date||'').split('T')[0] === date && j.id !== editJobId)
@@ -1724,6 +1749,18 @@ function showEditJob(id) {
   editJobProjects = [...(job.projects||[])];
   renderEditJobProjectTags();
   document.getElementById('editJobId').value = job.id;
+  // Load overridePoints
+  const editOp = document.getElementById('editOverridePoints');
+  const editOpWrap = document.getElementById('editOverridePointsWrap');
+  if(editOp && editOpWrap) {
+    editOp.value = job.overridePoints || '';
+    editOpWrap.style.display = editJobProjects.length > 0 ? 'block' : 'none';
+    if(!editOp.value && editJobProjects.length > 0) {
+      const month = normalizeDate(job.date).slice(0,7);
+      const tdp = teamDailyPoints.find(t => String(t.teamId) === String(job.teamId) && t.month === month);
+      if(tdp) editOp.value = Number(tdp.pointsPerDay);
+    }
+  }
   // init team dropdown
   const list = document.getElementById('editTeamList');
   list.innerHTML = teams.map(t=>`<div class="dropdown-item" onmousedown="selectEditTeam('${t.id}','${t.name}')">${t.name}</div>`).join('');
@@ -1753,6 +1790,7 @@ async function saveEditJob() {
   job.finalScore = finalTotal;
   job.discount = discount;
   job.projects = [...editJobProjects];
+  job.overridePoints = Number(document.getElementById('editOverridePoints')?.value) || 0;
   await apiSaveJob(job);
   await recalcProjectScores(teamId, teamName, date, job.id, job.jobScore || 0);
   closeModal('modalEditJob');
@@ -2077,6 +2115,7 @@ function addJobProject(name) {
   if(!currentJobProjects.includes(name)) {
     currentJobProjects.push(name);
     renderJobProjectTags();
+    updateOverridePointsField();
     renderJobItems();
   }
   document.getElementById('jobProjectSearch').value = '';
@@ -2086,7 +2125,30 @@ function addJobProject(name) {
 function removeJobProject(name) {
   currentJobProjects = currentJobProjects.filter(p => p !== name);
   renderJobProjectTags();
+  updateOverridePointsField();
   renderJobItems();
+}
+
+function updateOverridePointsField() {
+  const wrap = document.getElementById('overridePointsWrap');
+  const input = document.getElementById('overridePoints');
+  const defLabel = document.getElementById('overridePointsDefault');
+  if(!wrap) return;
+  if(currentJobProjects.length === 0) {
+    wrap.style.display = 'none';
+    if(input) input.value = '';
+    return;
+  }
+  wrap.style.display = 'block';
+  // Set default value from teamDailyPoints
+  const teamId = document.getElementById('teamValue').value;
+  const date = document.getElementById('jobDate').value;
+  const month = normalizeDate(date).slice(0,7);
+  const tdp = teamDailyPoints.find(t => String(t.teamId) === String(teamId) && t.month === month);
+  const defaultPts = tdp ? Number(tdp.pointsPerDay) : 0;
+  if(defLabel) defLabel.textContent = defaultPts.toLocaleString();
+  // Only set default if empty
+  if(!input.value && defaultPts > 0) input.value = defaultPts;
 }
 
 function renderJobProjectTags() {
@@ -2110,14 +2172,31 @@ function filterEditJobProjectDropdown() {
   if(filtered.length > 0) list.classList.add('show'); else list.classList.remove('show');
 }
 function addEditJobProject(name) {
-  if(!editJobProjects.includes(name)) { editJobProjects.push(name); renderEditJobProjectTags(); renderEditItems(); }
+  if(!editJobProjects.includes(name)) { editJobProjects.push(name); renderEditJobProjectTags(); updateEditOverrideField(); renderEditItems(); }
   document.getElementById('editJobProjectSearch').value = '';
   document.getElementById('editJobProjectList').classList.remove('show');
 }
 function removeEditJobProject(name) {
   editJobProjects = editJobProjects.filter(p => p !== name);
   renderEditJobProjectTags();
+  updateEditOverrideField();
   renderEditItems();
+}
+
+function updateEditOverrideField() {
+  const wrap = document.getElementById('editOverridePointsWrap');
+  const input = document.getElementById('editOverridePoints');
+  const defLabel = document.getElementById('editOverridePointsDefault');
+  if(!wrap) return;
+  if(editJobProjects.length === 0) { wrap.style.display = 'none'; if(input) input.value = ''; return; }
+  wrap.style.display = 'block';
+  const teamId = document.getElementById('editTeamValue').value;
+  const date = document.getElementById('editJobDate').value;
+  const month = normalizeDate(date).slice(0,7);
+  const tdp = teamDailyPoints.find(t => String(t.teamId) === String(teamId) && t.month === month);
+  const defaultPts = tdp ? Number(tdp.pointsPerDay) : 0;
+  if(defLabel) defLabel.textContent = defaultPts.toLocaleString();
+  if(!input.value && defaultPts > 0) input.value = defaultPts;
 }
 function renderEditJobProjectTags() {
   const el = document.getElementById('editJobProjectTags');
