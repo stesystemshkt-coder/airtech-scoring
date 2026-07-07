@@ -1286,7 +1286,7 @@ function calcScore() {
   let projectScores = [];
   let totalProjectScore = 0;
   if(currentJobProjects.length > 0 && teamId && date) {
-    const month = date.slice(0,7);
+    const month = normalizeDate(date).slice(0,7);
     // Find all daily points for this team+month
     const tdp1 = teamDailyPoints.find(t => String(t.teamId) === String(teamId) && t.month === month);
     const defaultPts = tdp1 ? Number(tdp1.pointsPerDay) : 0;
@@ -2062,7 +2062,7 @@ function showToast(msg) {
 
 // Recalculate all project scores for a team on a date
 async function recalcProjectScores(teamId, teamName, date, excludeJobId='', currentJobScore=0) {
-  const month = date.slice(0,7);
+  const month = normalizeDate(date).slice(0,7);
   const tdpR = teamDailyPoints.find(t => String(t.teamId) === String(teamId) && t.month === month);
   const dailyPoints = tdpR ? Number(tdpR.pointsPerDay) : 0;
   if(!dailyPoints) return;
@@ -2441,7 +2441,7 @@ function updatePjScorePreview() {
   const preview = document.getElementById('pjScorePreview');
   const breakdown = document.getElementById('pjScoreBreakdown');
   preview.style.display = 'block';
-  const tdp = teamDailyPoints.find(t => t.teamId === teamId && t.month === date.slice(0,7));
+  const tdp = teamDailyPoints.find(t => t.teamId === teamId && t.month === normalizeDate(date).slice(0,7));
   if(!tdp) {
     breakdown.innerHTML = `<span style="color:var(--yellow);">⚠️ ยังไม่ได้กำหนดคะแนนรายวันสำหรับทีมนี้เดือนนี้</span>`;
     return;
