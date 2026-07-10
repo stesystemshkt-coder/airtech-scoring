@@ -993,6 +993,16 @@ function findTDP(teamId, month) {
   ) || null;
 }
 
+// Escape a value for safe use inside a single-quoted JS string within a double-quoted
+// HTML attribute (e.g. onmousedown="fn('NAME')"). Names like "KIM'S..." otherwise break the handler.
+function jsq(s){
+  return String(s)
+    .replace(/\\/g,'\\\\')
+    .replace(/&/g,'&amp;')
+    .replace(/'/g,"\\'")
+    .replace(/"/g,'&quot;');
+}
+
 async function loadData() {
   showLoading('กำลังโหลดข้อมูล...');
   try {
@@ -1222,7 +1232,7 @@ function initNewJobForm() {
 
 function initTeamDropdown() {
   const list = document.getElementById('teamList');
-  list.innerHTML = teams.map(t=>`<div class="dropdown-item" onmousedown="selectTeam('${t.id}','${t.name}')">${t.name}</div>`).join('');
+  list.innerHTML = teams.map(t=>`<div class="dropdown-item" onmousedown="selectTeam('${t.id}','${jsq(t.name)}')">${t.name}</div>`).join('');
   // also update job filter
   const tf = document.getElementById('jobTeamFilter');
   if(tf) tf.innerHTML = '<option value="">ทุกทีม</option>' + teams.map(t=>`<option value="${t.id}">${t.name}</option>`).join('');
@@ -1234,7 +1244,7 @@ function filterDropdown(inputId, listId, data, key) {
   const list = document.getElementById(listId);
   const filtered = data.filter(d=>d[key].toLowerCase().includes(q));
   if(listId === 'teamList') {
-    list.innerHTML = filtered.map(t=>`<div class="dropdown-item" onmousedown="selectTeam('${t.id}','${t.name}')">${t.name}</div>`).join('');
+    list.innerHTML = filtered.map(t=>`<div class="dropdown-item" onmousedown="selectTeam('${t.id}','${jsq(t.name)}')">${t.name}</div>`).join('');
   }
   showDropdown(listId);
 }
@@ -1247,7 +1257,7 @@ function filterServiceDropdown() {
     s.name.toLowerCase().includes(q) || s.type.toLowerCase().includes(q)
   ).slice(0,30);
   list.innerHTML = filtered.map(s=>`
-    <div class="dropdown-item" onmousedown="selectService('${s.id}','${s.name}',${s.points},'${s.type}')">
+    <div class="dropdown-item" onmousedown="selectService('${s.id}','${jsq(s.name)}',${s.points},'${s.type}')">
       <div>
         <span class="type-badge">${s.type}</span>
         <span style="margin-left:6px;">${s.name}</span>
@@ -1612,7 +1622,7 @@ function filterEditTeamDropdown() {
   const q = document.getElementById('editTeamSearch').value.toLowerCase();
   const list = document.getElementById('editTeamList');
   const filtered = teams.filter(t=>t.name.toLowerCase().includes(q));
-  list.innerHTML = filtered.map(t=>`<div class="dropdown-item" onmousedown="selectEditTeam('${t.id}','${t.name}')">${t.name}</div>`).join('');
+  list.innerHTML = filtered.map(t=>`<div class="dropdown-item" onmousedown="selectEditTeam('${t.id}','${jsq(t.name)}')">${t.name}</div>`).join('');
   showDropdown('editTeamList');
 }
 
@@ -1628,7 +1638,7 @@ function filterEditServiceDropdown() {
   if(!q) { list.classList.remove('show'); return; }
   const filtered = services.filter(s=>s.name.toLowerCase().includes(q)||s.type.toLowerCase().includes(q)).slice(0,30);
   list.innerHTML = filtered.map(s=>`
-    <div class="dropdown-item" onmousedown="selectEditService('${s.id}','${s.name}',${s.points},'${s.type}')">
+    <div class="dropdown-item" onmousedown="selectEditService('${s.id}','${jsq(s.name)}',${s.points},'${s.type}')">
       <div><span class="type-badge">${s.type}</span><span style="margin-left:6px;">${s.name}</span></div>
       <span class="pts">${s.points} pts</span>
     </div>`).join('');
@@ -1792,7 +1802,7 @@ function showEditJob(id) {
   }
   // init team dropdown
   const list = document.getElementById('editTeamList');
-  list.innerHTML = teams.map(t=>`<div class="dropdown-item" onmousedown="selectEditTeam('${t.id}','${t.name}')">${t.name}</div>`).join('');
+  list.innerHTML = teams.map(t=>`<div class="dropdown-item" onmousedown="selectEditTeam('${t.id}','${jsq(t.name)}')">${t.name}</div>`).join('');
   closeModal('modalJobDetail');
   document.getElementById('modalEditJob').classList.add('show');
   // Render after modal shows so DOM values are ready
@@ -2136,7 +2146,7 @@ function filterJobProjectDropdown() {
   const list = document.getElementById('jobProjectList');
   if(!q) { list.classList.remove('show'); return; }
   const filtered = projects.filter(p => p.name.toLowerCase().includes(q));
-  list.innerHTML = filtered.map(p => `<div class="dropdown-item" onmousedown="addJobProject('${p.name}')">${p.name}</div>`).join('');
+  list.innerHTML = filtered.map(p => `<div class="dropdown-item" onmousedown="addJobProject('${jsq(p.name)}')">${p.name}</div>`).join('');
   if(filtered.length > 0) list.classList.add('show'); else list.classList.remove('show');
 }
 
@@ -2186,7 +2196,7 @@ function renderJobProjectTags() {
   el.innerHTML = currentJobProjects.map(p => `
     <span style="background:rgba(59,130,246,0.15);color:var(--accent);font-size:12px;padding:3px 10px;border-radius:20px;display:inline-flex;align-items:center;gap:6px;">
       🏗️ ${p}
-      <span onclick="removeJobProject('${p}')" style="cursor:pointer;color:var(--red);">×</span>
+      <span onclick="removeJobProject('${jsq(p)}')" style="cursor:pointer;color:var(--red);">×</span>
     </span>`).join('');
 }
 
@@ -2197,7 +2207,7 @@ function filterEditJobProjectDropdown() {
   const list = document.getElementById('editJobProjectList');
   if(!q||!list) return;
   const filtered = projects.filter(p => p.name.toLowerCase().includes(q));
-  list.innerHTML = filtered.map(p => `<div class="dropdown-item" onmousedown="addEditJobProject('${p.name}')">${p.name}</div>`).join('');
+  list.innerHTML = filtered.map(p => `<div class="dropdown-item" onmousedown="addEditJobProject('${jsq(p.name)}')">${p.name}</div>`).join('');
   if(filtered.length > 0) list.classList.add('show'); else list.classList.remove('show');
 }
 function addEditJobProject(name) {
@@ -2233,7 +2243,7 @@ function renderEditJobProjectTags() {
   el.innerHTML = editJobProjects.map(p => `
     <span style="background:rgba(59,130,246,0.15);color:var(--accent);font-size:12px;padding:3px 10px;border-radius:20px;display:inline-flex;align-items:center;gap:6px;">
       🏗️ ${p}
-      <span onclick="removeEditJobProject('${p}')" style="cursor:pointer;color:var(--red);">×</span>
+      <span onclick="removeEditJobProject('${jsq(p)}')" style="cursor:pointer;color:var(--red);">×</span>
     </span>`).join('');
 }
 
@@ -2284,7 +2294,7 @@ function filterPRowTeam(rowId) {
   const q = document.getElementById(`prow_team_${rowId}`).value.toLowerCase();
   const list = document.getElementById(`prow_list_${rowId}`);
   const filtered = teams.filter(t => t.name.toLowerCase().includes(q));
-  list.innerHTML = filtered.map(t => `<div class="dropdown-item" onmousedown="selectPRowTeam('${rowId}','${t.id}','${t.name}')">${t.name}</div>`).join('');
+  list.innerHTML = filtered.map(t => `<div class="dropdown-item" onmousedown="selectPRowTeam('${rowId}','${t.id}','${jsq(t.name)}')">${t.name}</div>`).join('');
   list.classList.add('show');
 }
 
@@ -2461,7 +2471,7 @@ function filterTdpTeamDropdown() {
   const q = document.getElementById('tdpTeamSearch').value.toLowerCase();
   const list = document.getElementById('tdpTeamList');
   const filtered = teams.filter(t => t.name.toLowerCase().includes(q));
-  list.innerHTML = filtered.map(t => `<div class="dropdown-item" onmousedown="selectTdpTeam('${t.id}','${t.name}')">${t.name}</div>`).join('');
+  list.innerHTML = filtered.map(t => `<div class="dropdown-item" onmousedown="selectTdpTeam('${t.id}','${jsq(t.name)}')">${t.name}</div>`).join('');
   showDropdown('tdpTeamList');
 }
 function selectTdpTeam(id, name) {
@@ -2594,7 +2604,7 @@ function showAddProjectJob() {
   document.getElementById('pjScorePreview').style.display = 'none';
   // init team dropdown
   const list = document.getElementById('pjTeamList');
-  list.innerHTML = teams.map(t => `<div class="dropdown-item" onmousedown="selectPjTeam('${t.id}','${t.name}')">${t.name}</div>`).join('');
+  list.innerHTML = teams.map(t => `<div class="dropdown-item" onmousedown="selectPjTeam('${t.id}','${jsq(t.name)}')">${t.name}</div>`).join('');
   document.getElementById('modalAddProjectJob').classList.add('show');
 }
 
@@ -2608,7 +2618,7 @@ function showEditProjectJob(id) {
   document.getElementById('pjName').value = pj.projectName;
   document.getElementById('pjEditId').value = id;
   const list = document.getElementById('pjTeamList');
-  list.innerHTML = teams.map(t => `<div class="dropdown-item" onmousedown="selectPjTeam('${t.id}','${t.name}')">${t.name}</div>`).join('');
+  list.innerHTML = teams.map(t => `<div class="dropdown-item" onmousedown="selectPjTeam('${t.id}','${jsq(t.name)}')">${t.name}</div>`).join('');
   updatePjScorePreview();
   document.getElementById('modalAddProjectJob').classList.add('show');
 }
@@ -2730,7 +2740,7 @@ function showAddTeamDailyPoints() {
   document.getElementById('tdpPoints').value = '';
   document.getElementById('tdpEditId').value = '';
   const list = document.getElementById('tdpTeamList');
-  list.innerHTML = teams.map(t => `<div class="dropdown-item" onmousedown="selectTdpTeam('${t.id}','${t.name}')">${t.name}</div>`).join('');
+  list.innerHTML = teams.map(t => `<div class="dropdown-item" onmousedown="selectTdpTeam('${t.id}','${jsq(t.name)}')">${t.name}</div>`).join('');
   document.getElementById('modalTeamDailyPoints').classList.add('show');
 }
 
@@ -2744,7 +2754,7 @@ function editTeamDailyPoints(id) {
   document.getElementById('tdpPoints').value = tdp.pointsPerDay;
   document.getElementById('tdpEditId').value = id;
   const list = document.getElementById('tdpTeamList');
-  list.innerHTML = teams.map(t => `<div class="dropdown-item" onmousedown="selectTdpTeam('${t.id}','${t.name}')">${t.name}</div>`).join('');
+  list.innerHTML = teams.map(t => `<div class="dropdown-item" onmousedown="selectTdpTeam('${t.id}','${jsq(t.name)}')">${t.name}</div>`).join('');
   document.getElementById('modalTeamDailyPoints').classList.add('show');
 }
 
