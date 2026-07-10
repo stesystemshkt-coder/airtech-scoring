@@ -988,10 +988,14 @@ function normalizeDate(dateStr) {
 function findTDP(teamId, month, projectName) {
   const teamName = (teams.find(t => String(t.id) === String(teamId)) || {}).name;
   const matchTeam = t => String(t.teamId) === String(teamId) || (teamName && t.teamName === teamName);
-  // Prefer the value recorded for THIS specific project (a team can have different
-  // daily points per project). Fall back to any team+month row if no project given/found.
   if(projectName) {
-    const byProj = teamDailyPoints.find(t => t.month === month && matchTeam(t) && t.projectName === projectName);
+    const norm = s => String(s||'').replace(/\s+/g,' ').trim().toLowerCase();
+    const proj = projects.find(p => norm(p.name) === norm(projectName));
+    const projId = proj ? proj.id : null;
+    // 1) match by projectId — survives rename / whitespace / spelling drift
+    let byProj = projId ? teamDailyPoints.find(t => t.month === month && matchTeam(t) && String(t.projectId) === String(projId)) : null;
+    // 2) fall back to normalized project-name match
+    if(!byProj) byProj = teamDailyPoints.find(t => t.month === month && matchTeam(t) && norm(t.projectName) === norm(projectName));
     if(byProj) return byProj;
   }
   return teamDailyPoints.find(t => t.month === month && matchTeam(t)) || null;
