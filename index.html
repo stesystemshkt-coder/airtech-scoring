@@ -983,6 +983,16 @@ function normalizeDate(dateStr) {
   return dateStr;
 }
 
+// Central lookup: match team daily points by teamId OR team name (ids can drift between
+// how a project stored a team and how the job form references it). Name is the stable anchor.
+function findTDP(teamId, month) {
+  const teamName = (teams.find(t => String(t.id) === String(teamId)) || {}).name;
+  return teamDailyPoints.find(t =>
+    t.month === month &&
+    (String(t.teamId) === String(teamId) || (teamName && t.teamName === teamName))
+  ) || null;
+}
+
 async function loadData() {
   showLoading('กำลังโหลดข้อมูล...');
   try {
@@ -1307,7 +1317,7 @@ function calcScore() {
   if(currentJobProjects.length > 0 && teamId && date) {
     const month = normalizeDate(date).slice(0,7);
     // Find all daily points for this team+month
-    const tdp1 = teamDailyPoints.find(t => String(t.teamId) === String(teamId) && t.month === month);
+    const tdp1 = findTDP(teamId, month);
     const defaultPts = tdp1 ? Number(tdp1.pointsPerDay) : 0;
     const overrideVal = Number(document.getElementById('overridePoints')?.value) || 0;
     const dailyPoints = overrideVal > 0 ? overrideVal : defaultPts;
@@ -1375,7 +1385,7 @@ function renderJobItems() {
     const date = document.getElementById('jobDate').value;
     const month = (date||'').slice(0,7);
     // Find matching teamDailyPoints by teamId + month
-    const tdp = teamDailyPoints.find(t => String(t.teamId) === String(teamId) && t.month === month) || null;
+    const tdp = findTDP(teamId, month) || null;
     if(!tdp) {
       breakdownHTML += `<div style="font-size:12px;color:var(--yellow);margin-bottom:4px;">⚠️ ยังไม่ได้กำหนดคะแนนรายวันเดือนนี้</div>`;
     }
@@ -1736,7 +1746,7 @@ function calcEditScoreWithProjects() {
   const editJobId = document.getElementById('editJobId')?.value || '';
   if(editJobProjects.length > 0 && teamId && date) {
     const month = date.slice(0,7);
-    const tdpE = teamDailyPoints.find(t => String(t.teamId) === String(teamId) && t.month === month);
+    const tdpE = findTDP(teamId, month);
     const defaultPtsE = tdpE ? Number(tdpE.pointsPerDay) : 0;
     const overrideValE = Number(document.getElementById('editOverridePoints')?.value) || 0;
     const dailyPoints = overrideValE > 0 ? overrideValE : defaultPtsE;
@@ -1776,7 +1786,7 @@ function showEditJob(id) {
     editOpWrap.style.display = editJobProjects.length > 0 ? 'block' : 'none';
     if(!editOp.value && editJobProjects.length > 0) {
       const month = normalizeDate(job.date).slice(0,7);
-      const tdp = teamDailyPoints.find(t => String(t.teamId) === String(job.teamId) && t.month === month);
+      const tdp = findTDP(job.teamId, month);
       if(tdp) editOp.value = Number(tdp.pointsPerDay);
     }
   }
@@ -2082,7 +2092,7 @@ function showToast(msg) {
 // Recalculate all project scores for a team on a date
 async function recalcProjectScores(teamId, teamName, date, excludeJobId='', currentJobScore=0) {
   const month = normalizeDate(date).slice(0,7);
-  const tdpR = teamDailyPoints.find(t => String(t.teamId) === String(teamId) && t.month === month);
+  const tdpR = findTDP(teamId, month);
   const dailyPoints = tdpR ? Number(tdpR.pointsPerDay) : 0;
   if(!dailyPoints) return;
   // Sum ONLY job scores (not finalScore which includes project) for other jobs this team+date
@@ -2163,7 +2173,7 @@ function updateOverridePointsField() {
   const teamId = document.getElementById('teamValue').value;
   const date = document.getElementById('jobDate').value;
   const month = normalizeDate(date).slice(0,7);
-  const tdp = teamDailyPoints.find(t => String(t.teamId) === String(teamId) && t.month === month);
+  const tdp = findTDP(teamId, month);
   const defaultPts = tdp ? Number(tdp.pointsPerDay) : 0;
   if(defLabel) defLabel.textContent = defaultPts.toLocaleString();
   // Only set default if empty
@@ -2212,7 +2222,7 @@ function updateEditOverrideField() {
   const teamId = document.getElementById('editTeamValue').value;
   const date = document.getElementById('editJobDate').value;
   const month = normalizeDate(date).slice(0,7);
-  const tdp = teamDailyPoints.find(t => String(t.teamId) === String(teamId) && t.month === month);
+  const tdp = findTDP(teamId, month);
   const defaultPts = tdp ? Number(tdp.pointsPerDay) : 0;
   if(defLabel) defLabel.textContent = defaultPts.toLocaleString();
   if(!input.value && defaultPts > 0) input.value = defaultPts;
@@ -2540,7 +2550,7 @@ async function confirmDedupeTdp() {
 // Mirrors the logic inside saveProjectJob so preview and saved value stay consistent.
 function calcProjectScore(teamId, date) {
   const month = normalizeDate(date).slice(0,7);
-  const tdp = teamDailyPoints.find(t => String(t.teamId) === String(teamId) && t.month === month);
+  const tdp = findTDP(teamId, month);
   const dailyPoints = tdp ? Number(tdp.pointsPerDay) : 0;
   const jobPoints = jobs
     .filter(j => String(j.teamId) === String(teamId) && (j.date||'').split('T')[0] === date)
@@ -2559,7 +2569,7 @@ function updatePjScorePreview() {
   const preview = document.getElementById('pjScorePreview');
   const breakdown = document.getElementById('pjScoreBreakdown');
   preview.style.display = 'block';
-  const tdp = teamDailyPoints.find(t => String(t.teamId) === String(teamId) && t.month === normalizeDate(date).slice(0,7));
+  const tdp = findTDP(teamId, normalizeDate(date).slice(0,7));
   if(!tdp) {
     breakdown.innerHTML = `<span style="color:var(--yellow);">⚠️ ยังไม่ได้กำหนดคะแนนรายวันสำหรับทีมนี้เดือนนี้</span>`;
     return;
@@ -2616,7 +2626,7 @@ async function saveProjectJob() {
   // Recalculate all project scores for this team+date
   const sameDay = projectJobs.filter(p => p.teamId === teamId && p.date === date && p.id !== editId);
   const month = date.slice(0,7);
-  const tdp = teamDailyPoints.find(t => t.teamId === teamId && t.month === month);
+  const tdp = findTDP(teamId, month);
   const dailyPoints = tdp ? Number(tdp.pointsPerDay) : 0;
   const jobPoints = jobs.filter(j => j.teamId === teamId && (j.date||'').split('T')[0] === date).reduce((a,b) => a+(Number(b.finalScore)||0), 0);
   const totalProjectScore = Math.max(0, dailyPoints - jobPoints);
@@ -2662,7 +2672,7 @@ async function deleteProjectJob(id) {
     const sameDay = projectJobs.filter(p => p.teamId === pj.teamId && p.date === pj.date);
     if(sameDay.length > 0) {
       const month = pj.date.slice(0,7);
-      const tdp = teamDailyPoints.find(t => t.teamId === pj.teamId && t.month === month);
+      const tdp = findTDP(pj.teamId, month);
       const dailyPoints = tdp ? Number(tdp.pointsPerDay) : 0;
       const jobPoints = jobs.filter(j => j.teamId === pj.teamId && (j.date||'').split('T')[0] === pj.date).reduce((a,b) => a+(Number(b.finalScore)||0), 0);
       const totalScore = Math.max(0, dailyPoints - jobPoints);
