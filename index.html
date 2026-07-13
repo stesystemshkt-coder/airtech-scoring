@@ -1006,11 +1006,14 @@ function findTDP(teamId, month, projectName) {
 // A single-project override lets you bump that one project's daily for the day.
 function computeProjectScores(teamId, month, projectNames, jobScore, otherJobsScore, overrideVal) {
   if(!projectNames || !projectNames.length) return { projectScores: [], totalProjectScore: 0, totalDaily: 0 };
+  const n = projectNames.length;
+  // Each project's daily points are SPLIT across the projects done that day
+  // (2 projects same day => each gets half). One project => full value.
   const dailies = projectNames.map(name => {
     const t = findTDP(teamId, month, name);
-    return { name, daily: t ? Number(t.pointsPerDay) : 0 };
+    return { name, daily: (t ? Number(t.pointsPerDay) : 0) / n };
   });
-  if(projectNames.length === 1 && Number(overrideVal) > 0) dailies[0].daily = Number(overrideVal);
+  if(n === 1 && Number(overrideVal) > 0) dailies[0].daily = Number(overrideVal);
   const totalDaily = dailies.reduce((a, b) => a + b.daily, 0);
   const pool = Math.max(0, totalDaily - Number(jobScore || 0) - Number(otherJobsScore || 0));
   const projectScores = dailies.map(d => ({
@@ -2142,8 +2145,10 @@ async function recalcProjectScores(teamId, teamName, date, excludeJobId='', curr
   allJobsToday.forEach(j => { (j.projects||[]).forEach(p => allProjects.push({jobId:j.id, name:p})); });
   if(allProjects.length === 0) return;
 
-  // Each project contributes its OWN recorded daily points; pool is split proportionally.
-  allProjects.forEach(p => { const t = findTDP(teamId, month, p.name); p.daily = t ? Number(t.pointsPerDay) : 0; });
+  // Each project contributes its OWN recorded daily points, SPLIT across all projects
+  // done that day (2 project jobs same day => each halved). Pool is then distributed.
+  const n = allProjects.length;
+  allProjects.forEach(p => { const t = findTDP(teamId, month, p.name); p.daily = (t ? Number(t.pointsPerDay) : 0) / n; });
   const totalDaily = allProjects.reduce((a,p) => a + p.daily, 0);
   if(totalDaily <= 0) return;
   const pool = Math.max(0, totalDaily - jobPoints);
