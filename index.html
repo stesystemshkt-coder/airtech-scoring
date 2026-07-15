@@ -457,6 +457,12 @@
             oninput="renderJobItems()"
             style="width:100%;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:15px;outline:none;">
           <div style="font-size:12px;color:var(--text3);margin-top:4px;">ปกติ: <span id="overridePointsDefault">-</span> pts/วัน — แก้ถ้าวันนี้มีคนมาช่วยพิเศษ</div>
+          <div style="margin-top:12px;">
+            <label style="display:block;margin-bottom:4px;">พนักงานพม่ามาช่วย (คน) <span style="color:var(--text3);font-weight:400;">— ทีมได้ +600 ต่อคน</span></label>
+            <input type="number" id="burmeseHelpers" min="0" value="0"
+              oninput="renderJobItems()"
+              style="width:100%;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:15px;outline:none;">
+          </div>
         </div>
       </div>
 
@@ -782,6 +788,12 @@
         oninput="renderEditItems()"
         style="width:100%;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:15px;outline:none;">
       <div style="font-size:12px;color:var(--text3);margin-top:4px;">ปกติ: <span id="editOverridePointsDefault">-</span> pts/วัน</div>
+      <div style="margin-top:12px;">
+        <label style="display:block;margin-bottom:4px;">พนักงานพม่ามาช่วย (คน) <span style="color:var(--text3);font-weight:400;">— ทีมได้ +600 ต่อคน</span></label>
+        <input type="number" id="editBurmeseHelpers" min="0" value="0"
+          oninput="renderEditItems()"
+          style="width:100%;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:15px;outline:none;">
+      </div>
     </div>
     <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:8px;">รายการงาน</div>
     <table class="items-table" id="editItemsTable" style="margin-bottom:12px;">
@@ -1004,7 +1016,7 @@ function findTDP(teamId, month, projectName) {
 // Per-project scoring: each selected project contributes ITS OWN daily points.
 // The pool (sum of project dailies, minus regular job work) is split proportionally.
 // A single-project override lets you bump that one project's daily for the day.
-function computeProjectScores(teamId, month, projectNames, jobScore, otherJobsScore, overrideVal) {
+function computeProjectScores(teamId, month, projectNames, jobScore, otherJobsScore, overrideVal, bonus) {
   if(!projectNames || !projectNames.length) return { projectScores: [], totalProjectScore: 0, totalDaily: 0 };
   const n = projectNames.length;
   // Each project's daily points are SPLIT across the projects done that day
@@ -1015,7 +1027,8 @@ function computeProjectScores(teamId, month, projectNames, jobScore, otherJobsSc
   });
   if(n === 1 && Number(overrideVal) > 0) dailies[0].daily = Number(overrideVal);
   const totalDaily = dailies.reduce((a, b) => a + b.daily, 0);
-  const pool = Math.max(0, totalDaily - Number(jobScore || 0) - Number(otherJobsScore || 0));
+  // +bonus (e.g. 600 per Burmese helper) is added to the team's daily pool for the day
+  const pool = Math.max(0, totalDaily + Number(bonus || 0) - Number(jobScore || 0) - Number(otherJobsScore || 0));
   const projectScores = dailies.map(d => ({
     name: d.name,
     score: totalDaily > 0 ? Math.round(pool * (d.daily / totalDaily)) : 0
@@ -1368,10 +1381,11 @@ function calcScore() {
   if(currentJobProjects.length > 0 && teamId && date) {
     const month = normalizeDate(date).slice(0,7);
     const overrideVal = Number(document.getElementById('overridePoints')?.value) || 0;
+    const burmeseBonus = (Number(document.getElementById('burmeseHelpers')?.value) || 0) * 600;
     const otherJobsScore = jobs
       .filter(j => String(j.teamId) === String(teamId) && (j.date||'').split('T')[0] === date)
       .reduce((a,b) => a+(Number(b.jobScore || b.rawScore)||0), 0);
-    const r = computeProjectScores(teamId, month, currentJobProjects, jobScore, otherJobsScore, overrideVal);
+    const r = computeProjectScores(teamId, month, currentJobProjects, jobScore, otherJobsScore, overrideVal, burmeseBonus);
     projectScores = r.projectScores;
     totalProjectScore = r.totalProjectScore;
   }
@@ -1463,6 +1477,7 @@ async function saveJob() {
     finalScore: finalTotal,
     discount,
     overridePoints: overridePts,
+    burmeseHelpers: Number(document.getElementById('burmeseHelpers')?.value) || 0,
     createdAt: new Date().toISOString()
   };
   await apiSaveJob(job);
@@ -1482,6 +1497,8 @@ function resetNewJob() {
   renderJobProjectTags();
   const op = document.getElementById('overridePoints');
   if(op) op.value = '';
+  const bh = document.getElementById('burmeseHelpers');
+  if(bh) bh.value = 0;
   const ow = document.getElementById('overridePointsWrap');
   if(ow) ow.style.display = 'none';
   document.getElementById('serviceSearch').value = '';
@@ -1791,10 +1808,11 @@ function calcEditScoreWithProjects() {
   if(editJobProjects.length > 0 && teamId && date) {
     const month = date.slice(0,7);
     const overrideValE = Number(document.getElementById('editOverridePoints')?.value) || 0;
+    const burmeseBonusE = (Number(document.getElementById('editBurmeseHelpers')?.value) || 0) * 600;
     const otherJobsScore = jobs
       .filter(j => String(j.teamId) === String(teamId) && (j.date||'').split('T')[0] === date && j.id !== editJobId)
       .reduce((a,b) => a+(Number(b.jobScore||0)),0);
-    const r = computeProjectScores(teamId, month, editJobProjects, jobScore, otherJobsScore, overrideValE);
+    const r = computeProjectScores(teamId, month, editJobProjects, jobScore, otherJobsScore, overrideValE, burmeseBonusE);
     projectScores = r.projectScores;
     totalProjectScore = r.totalProjectScore;
   }
@@ -1822,6 +1840,8 @@ function showEditJob(id) {
   if(editOp && editOpWrap) {
     editOp.value = job.overridePoints || '';
     editOpWrap.style.display = editJobProjects.length > 0 ? 'block' : 'none';
+    const editBh = document.getElementById('editBurmeseHelpers');
+    if(editBh) editBh.value = Number(job.burmeseHelpers) || 0;
     if(!editOp.value && editJobProjects.length > 0) {
       const month = normalizeDate(job.date).slice(0,7);
       const tdp = findTDP(job.teamId, month);
@@ -1858,6 +1878,7 @@ async function saveEditJob() {
   job.discount = discount;
   job.projects = [...editJobProjects];
   job.overridePoints = Number(document.getElementById('editOverridePoints')?.value) || 0;
+  job.burmeseHelpers = Number(document.getElementById('editBurmeseHelpers')?.value) || 0;
   await apiSaveJob(job);
   await recalcProjectScores(teamId, teamName, date, job.id, job.jobScore || 0);
   closeModal('modalEditJob');
@@ -2154,7 +2175,9 @@ async function recalcProjectScores(teamId, teamName, date, excludeJobId='', curr
   allProjects.forEach(p => { const t = findTDP(teamId, month, p.name); p.daily = (t ? Number(t.pointsPerDay) : 0) / n; });
   const totalDaily = allProjects.reduce((a,p) => a + p.daily, 0);
   if(totalDaily <= 0) return;
-  const pool = Math.max(0, totalDaily - jobPoints);
+  // +600 per Burmese helper, summed across this team's jobs that day
+  const burmeseBonus = allJobsToday.reduce((a,j) => a + (Number(j.burmeseHelpers)||0), 0) * 600;
+  const pool = Math.max(0, totalDaily + burmeseBonus - jobPoints);
 
   // Save to projectJobs sheet — remove old entries for this team+date first
   const oldEntries = projectJobs.filter(p => p.teamId === teamId && p.date === date);
