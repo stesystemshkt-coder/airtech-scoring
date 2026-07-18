@@ -260,7 +260,7 @@
   }
 
   /* ── STATS ── */
-  .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-bottom: 20px; }
   .stat-card {
     background: var(--surface); border: 1px solid var(--border);
     border-radius: 10px; padding: 16px;
@@ -571,32 +571,53 @@
 
       <div class="stats-grid" id="statsGrid"></div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title">🏆 อันดับทีม</div>
-          </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">🏆 อันดับทีม (แยกประเภทคะแนน)</div>
+        </div>
+        <div style="overflow-x:auto;">
           <table class="report-table" id="teamRankTable">
-            <thead><tr><th>#</th><th>ทีม</th><th>Jobs</th><th>คะแนนรวม</th></tr></thead>
+            <thead><tr>
+              <th>#</th><th>ทีม</th><th>Jobs</th>
+              <th>🏗️ โปรเจ็ค</th><th>🔧 SERVICE</th><th>🛠️ ซ่อม/อะไหล่</th>
+              <th>📦 ติดตั้ง</th><th>อื่นๆ</th><th>รวม</th>
+            </tr></thead>
             <tbody id="teamRankBody"></tbody>
           </table>
         </div>
+      </div>
+
+      <div class="card mt-16">
+        <div class="card-header">
+          <div class="card-title">🏗️ คะแนนโปรเจ็ค (แยกตามโครงการ / Plot / ทีม)</div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="report-table" id="projBreakTable">
+            <thead><tr><th>โครงการ</th><th>Plot</th><th>ทีม</th><th>คะแนน</th></tr></thead>
+            <tbody id="projBreakBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" class="mt-16">
         <div class="card">
           <div class="card-header">
             <div class="card-title">📋 ใบงานล่าสุด</div>
           </div>
           <div id="recentJobsContainer"></div>
         </div>
-      </div>
 
-      <div class="card mt-16">
-        <div class="card-header">
-          <div class="card-title">📊 รายละเอียดรายวัน</div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">📊 รายละเอียดรายวัน</div>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="report-table" id="dailyTable">
+              <thead><tr><th>วันที่</th><th>Jobs</th><th>🏗️ โปรเจ็ค</th><th>🔧 งาน</th><th>รวม</th><th>ทีม</th></tr></thead>
+              <tbody id="dailyBody"></tbody>
+            </table>
+          </div>
         </div>
-        <table class="report-table" id="dailyTable">
-          <thead><tr><th>วันที่</th><th>Jobs</th><th>คะแนนรวม</th><th>ทีม</th></tr></thead>
-          <tbody id="dailyBody"></tbody>
-        </table>
       </div>
     </div>
 
@@ -1887,81 +1908,248 @@ async function saveEditJob() {
 }
 
 // ── DASHBOARD ──
+// Split "ANCHAN INDIGO II PLOT 21" into { dev:'ANCHAN INDIGO II', plot:'PLOT 21' }.
+// Projects without a plot (e.g. "NEO") return an empty plot.
+function splitProjectName(name) {
+  const s = String(name || '').trim();
+  const m = s.match(/^(.*?)[\s\-–]*PLOT\s*([A-Za-z0-9\/\.\-]+)\s*$/i);
+  if(m && m[1].trim()) return { dev: m[1].trim(), plot: 'PLOT ' + m[2].trim() };
+  return { dev: s, plot: '' };
+}
+
+// Split a job's WORK score (งานปกติ) by category.
+// Project points are deliberately NOT taken from the job record: they are recalculated
+// across the whole day in recalcProjectScores() and stored in projectJobs, which is the
+// single source of truth. A job's own projectScores/finalScore is only a snapshot from
+// the moment it was saved and goes stale once another job is added on the same day.
+function jobBreakdown(j) {
+  const items = Array.isArray(j.items) ? j.items : [];
+  const cat = { service:0, install:0, repair:0, other:0 };
+  let serviceRaw = 0;
+  items.forEach(it => {
+    const v = (Number(it.pts)||0) * (Number(it.qty)||1);
+    const t = String(it.type||'');
+    if(t.startsWith('SERVICE')) serviceRaw += v;
+    else if(t.startsWith('ติดตั้ง')) cat.install += v;
+    else if(t === 'เปลี่ยนอะไหล่') cat.repair += v;
+    else cat.other += v;
+  });
+  cat.service = Math.round(serviceRaw * (1 - (Number(j.discount)||0)));
+  cat.work = cat.service + cat.install + cat.repair + cat.other;
+  // Legacy jobs saved without item detail: keep their points rather than losing them
+  if(cat.work === 0 && Number(j.jobScore) > 0) {
+    cat.other = Number(j.jobScore);
+    cat.work = cat.other;
+  }
+  return cat;
+}
+
 function renderDashboard() {
   const period = document.getElementById('reportPeriod').value;
   const month = document.getElementById('reportMonth').value;
+  const today = new Date().toISOString().split('T')[0];
   let filtered = jobs;
-  if(period==='monthly' && month) filtered = jobs.filter(j=>j.date.startsWith(month));
-  if(period==='daily') {
-    const today = new Date().toISOString().split('T')[0];
-    filtered = jobs.filter(j=>j.date===today);
+  let filteredPJ = projectJobs;
+  if(period==='monthly' && month) {
+    filtered = jobs.filter(j=>j.date.startsWith(month));
+    filteredPJ = projectJobs.filter(p=>(p.date||'').startsWith(month));
   }
-  const totalScore = filtered.reduce((a,b)=>a+b.finalScore,0);
+  if(period==='daily') {
+    filtered = jobs.filter(j=>j.date===today);
+    filteredPJ = projectJobs.filter(p=>p.date===today);
+  }
   const totalJobs = filtered.length;
+
+  // Work points come from each job's items; PROJECT points come from projectJobs,
+  // which recalcProjectScores() keeps correct for the whole day.
+  const sum = { service:0, install:0, repair:0, other:0, project:0 };
+  const teamScores = {};
+  const projMap = {};   // dev -> plot -> teamName -> score
+  const teamOf = (id, name) => {
+    const k = String(id);
+    if(!teamScores[k]) teamScores[k] = {name, jobs:0, total:0, service:0, install:0, repair:0, other:0, project:0};
+    if(name) teamScores[k].name = teamScores[k].name || name;
+    return teamScores[k];
+  };
+
+  filtered.forEach(j=>{
+    const b = jobBreakdown(j);
+    ['service','install','repair','other'].forEach(k => sum[k] += b[k]);
+    const t = teamOf(j.teamId, j.teamName);
+    t.jobs++;
+    ['service','install','repair','other'].forEach(k => t[k] += b[k]);
+  });
+
+  filteredPJ.forEach(p=>{
+    const score = Number(p.score)||0;
+    sum.project += score;
+    teamOf(p.teamId, p.teamName).project += score;
+    const sp = splitProjectName(p.projectName);
+    const plotKey = sp.plot || '—';
+    if(!projMap[sp.dev]) projMap[sp.dev] = {};
+    if(!projMap[sp.dev][plotKey]) projMap[sp.dev][plotKey] = {};
+    const tn = p.teamName || '-';
+    projMap[sp.dev][plotKey][tn] = (projMap[sp.dev][plotKey][tn]||0) + score;
+  });
+
+  Object.values(teamScores).forEach(t => {
+    t.total = t.service + t.install + t.repair + t.other + t.project;
+  });
+  const workTotal = sum.service + sum.install + sum.repair + sum.other;
+  const totalScore = workTotal + sum.project;
   const avgScore = totalJobs ? Math.round(totalScore/totalJobs) : 0;
+
   document.getElementById('statsGrid').innerHTML = `
     <div class="stat-card"><div class="stat-label">ใบงานทั้งหมด</div><div class="stat-value">${totalJobs}</div><div class="stat-sub">รายการ</div></div>
-    <div class="stat-card"><div class="stat-label">คะแนนรวม</div><div class="stat-value">${totalScore.toLocaleString()}</div><div class="stat-sub">คะแนน</div></div>
+    <div class="stat-card"><div class="stat-label">คะแนนรวม</div><div class="stat-value">${totalScore.toLocaleString()}</div><div class="stat-sub">โปรเจ็ค + งาน</div></div>
+    <div class="stat-card"><div class="stat-label">🏗️ คะแนนโปรเจ็ค</div><div class="stat-value" style="color:var(--accent)">${sum.project.toLocaleString()}</div><div class="stat-sub">${totalScore?Math.round(sum.project/totalScore*100):0}% ของทั้งหมด</div></div>
+    <div class="stat-card"><div class="stat-label">🔧 คะแนนงาน (SERVICE/ซ่อม/ติดตั้ง)</div><div class="stat-value" style="color:var(--accent2)">${workTotal.toLocaleString()}</div><div class="stat-sub">SERVICE ${sum.service.toLocaleString()} · ซ่อม ${sum.repair.toLocaleString()} · ติดตั้ง ${sum.install.toLocaleString()}</div></div>
     <div class="stat-card"><div class="stat-label">คะแนนเฉลี่ย/Job</div><div class="stat-value">${avgScore.toLocaleString()}</div><div class="stat-sub">คะแนน/ใบงาน</div></div>`;
 
   // Team rank
-  const teamScores = {};
-  filtered.forEach(j=>{
-    if(!teamScores[j.teamId]) teamScores[j.teamId]={name:j.teamName,score:0,jobs:0};
-    teamScores[j.teamId].score += j.finalScore;
-    teamScores[j.teamId].jobs++;
-  });
-  const ranked = Object.values(teamScores).sort((a,b)=>b.score-a.score);
+  const ranked = Object.values(teamScores).sort((a,b)=>b.total-a.total);
   const rankColors = ['rank-1','rank-2','rank-3'];
+  const cell = v => `<td class="num" style="color:${v?'var(--text)':'var(--text3)'}">${v.toLocaleString()}</td>`;
   document.getElementById('teamRankBody').innerHTML = ranked.length ? ranked.map((t,i)=>`
     <tr><td class="num ${rankColors[i]||''}">${i+1}</td><td>${t.name}</td>
-    <td class="num">${t.jobs}</td><td class="num" style="color:var(--accent2)">${t.score.toLocaleString()}</td></tr>`).join('')
-    : `<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:20px;">ไม่มีข้อมูล</td></tr>`;
+    <td class="num">${t.jobs}</td>
+    <td class="num" style="color:var(--accent)">${t.project.toLocaleString()}</td>
+    ${cell(t.service)}${cell(t.repair)}${cell(t.install)}${cell(t.other)}
+    <td class="num" style="color:var(--accent2);font-weight:600;">${t.total.toLocaleString()}</td></tr>`).join('')
+    : `<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:20px;">ไม่มีข้อมูล</td></tr>`;
 
-  // Recent jobs
-  const recent = filtered.slice(0,5);
-  document.getElementById('recentJobsContainer').innerHTML = recent.length ? recent.map(j=>`
+  // Project breakdown: โครงการ → Plot → ทีม
+  const plotNum = s => { const m = String(s).match(/(\d+)/); return m ? parseInt(m[1]) : 999999; };
+  const projRows = [];
+  Object.keys(projMap).sort((a,b)=>a.localeCompare(b,'th')).forEach(dev=>{
+    const plots = projMap[dev];
+    const plotNames = Object.keys(plots).sort((a,b)=> plotNum(a)-plotNum(b) || a.localeCompare(b,'th'));
+    const devTotal = plotNames.reduce((a,pl)=> a + Object.values(plots[pl]).reduce((x,y)=>x+y,0), 0);
+    projRows.push(`<tr style="background:var(--surface2);">
+      <td colspan="3" style="font-weight:600;">🏗️ ${dev}</td>
+      <td class="num" style="color:var(--accent2);font-weight:700;">${devTotal.toLocaleString()}</td></tr>`);
+    plotNames.forEach(pl=>{
+      const teamsOf = plots[pl];
+      const tns = Object.keys(teamsOf).sort((a,b)=>teamsOf[b]-teamsOf[a]);
+      tns.forEach((tn,idx)=>{
+        projRows.push(`<tr>
+          <td></td>
+          <td style="font-size:13px;color:var(--text2);">${idx===0 ? (pl==='—'?'<span style="color:var(--text3)">ไม่มี Plot</span>':pl) : ''}</td>
+          <td style="font-size:13px;color:var(--text2);">${tn}</td>
+          <td class="num" style="color:var(--accent);">${teamsOf[tn].toLocaleString()}</td></tr>`);
+      });
+      if(tns.length > 1) {
+        const plotTotal = tns.reduce((a,n)=>a+teamsOf[n],0);
+        projRows.push(`<tr><td></td><td></td>
+          <td style="font-size:12px;color:var(--text3);">รวม ${pl}</td>
+          <td class="num" style="color:var(--text2);">${plotTotal.toLocaleString()}</td></tr>`);
+      }
+    });
+  });
+  document.getElementById('projBreakBody').innerHTML = projRows.length ? projRows.join('')
+    : `<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:20px;">ไม่มีคะแนนโปรเจ็คในช่วงนี้</td></tr>`;
+
+  // Recent jobs — work score plus this job's share of the day's project points.
+  // Each projectJobs row is consumed once so two jobs never claim the same points.
+  const pjPool = filteredPJ.slice();
+  const recent = filtered.slice(0,5).map(j=>{
+    const b = jobBreakdown(j);
+    let proj = 0;
+    (j.projects||[]).forEach(pn=>{
+      const idx = pjPool.findIndex(p => String(p.teamId)===String(j.teamId) && p.date===j.date && p.projectName===pn);
+      if(idx >= 0) { proj += Number(pjPool[idx].score)||0; pjPool.splice(idx,1); }
+    });
+    return { j, total: b.work + proj };
+  });
+  document.getElementById('recentJobsContainer').innerHTML = recent.length ? recent.map(r=>`
     <div class="settings-item">
-      <div><div class="settings-name">${j.customer||j.name||'ไม่ระบุ'}</div>
-      <div class="settings-meta">${j.date} · ${j.teamName}</div></div>
-      <div style="font-family:var(--mono);color:var(--accent2);">${j.finalScore.toLocaleString()}</div>
+      <div><div class="settings-name">${r.j.customer||r.j.name||'ไม่ระบุ'}</div>
+      <div class="settings-meta">${r.j.date} · ${r.j.teamName}</div></div>
+      <div style="font-family:var(--mono);color:var(--accent2);">${r.total.toLocaleString()}</div>
     </div>`).join('') : `<div class="empty"><p>ไม่มีข้อมูล</p></div>`;
 
-  // Daily breakdown
+  // Daily breakdown — work from jobs, project from projectJobs
   const byDay = {};
+  const dayOf = d => (byDay[d] = byDay[d] || {work:0, project:0, jobs:0, teams:new Set()});
   filtered.forEach(j=>{
-    if(!byDay[j.date]) byDay[j.date]={score:0,jobs:0,teams:new Set()};
-    byDay[j.date].score+=j.finalScore; byDay[j.date].jobs++;
-    byDay[j.date].teams.add(j.teamName);
+    const d = dayOf(j.date);
+    d.work += jobBreakdown(j).work; d.jobs++; d.teams.add(j.teamName);
+  });
+  filteredPJ.forEach(p=>{
+    const d = dayOf(p.date);
+    d.project += Number(p.score)||0;
+    if(p.teamName) d.teams.add(p.teamName);
   });
   const days = Object.keys(byDay).sort().reverse();
   document.getElementById('dailyBody').innerHTML = days.length ? days.map(d=>`
     <tr><td>${d}</td><td class="num">${byDay[d].jobs}</td>
-    <td class="num" style="color:var(--accent2)">${byDay[d].score.toLocaleString()}</td>
+    <td class="num" style="color:var(--accent)">${byDay[d].project.toLocaleString()}</td>
+    <td class="num">${byDay[d].work.toLocaleString()}</td>
+    <td class="num" style="color:var(--accent2);font-weight:600;">${(byDay[d].work+byDay[d].project).toLocaleString()}</td>
     <td style="font-size:12px;color:var(--text3)">${[...byDay[d].teams].join(', ')}</td></tr>`).join('')
-    : `<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:20px;">ไม่มีข้อมูล</td></tr>`;
+    : `<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px;">ไม่มีข้อมูล</td></tr>`;
 }
 
 // ── EXPORT EXCEL ──
 function exportExcel() {
   const period = document.getElementById('reportPeriod').value;
   const month = document.getElementById('reportMonth').value;
-  let filtered = jobs;
-  if(period==='monthly'&&month) filtered=jobs.filter(j=>j.date.startsWith(month));
-  if(period==='daily') { const t=new Date().toISOString().split('T')[0]; filtered=jobs.filter(j=>j.date===t); }
+  const today = new Date().toISOString().split('T')[0];
+  let filtered = jobs, filteredPJ = projectJobs;
+  if(period==='monthly'&&month) {
+    filtered = jobs.filter(j=>j.date.startsWith(month));
+    filteredPJ = projectJobs.filter(p=>(p.date||'').startsWith(month));
+  }
+  if(period==='daily') {
+    filtered = jobs.filter(j=>j.date===today);
+    filteredPJ = projectJobs.filter(p=>p.date===today);
+  }
 
   const wb = XLSX.utils.book_new();
-  // Jobs sheet
-  const jData = [['เลขที่','วันที่','ลูกค้า','ชื่องาน','ทีม','รายการ','คะแนนก่อนลด','ส่วนลด%','คะแนนสุทธิ']];
-  filtered.forEach(j=>jData.push([j.jobNo,j.date,j.customer||'',j.name||'',j.teamName,j.items.length,j.rawScore,j.discount*100,j.finalScore]));
+  // Jobs sheet (งานปกติ — คะแนนโปรเจ็คอยู่ชีตแยก เพราะคิดรวมทั้งวันต่อทีม)
+  const jData = [['เลขที่','วันที่','ลูกค้า','ชื่องาน','ทีม','รายการ','คะแนนก่อนลด','ส่วนลด%','SERVICE','ซ่อม/อะไหล่','ติดตั้ง','อื่นๆ','รวมคะแนนงาน']];
+  filtered.forEach(j=>{
+    const b = jobBreakdown(j);
+    jData.push([j.jobNo,j.date,j.customer||'',j.name||'',j.teamName,(j.items||[]).length,j.rawScore,(Number(j.discount)||0)*100,
+      b.service,b.repair,b.install,b.other,b.work]);
+  });
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(jData), 'ใบงาน');
 
-  // Team summary
+  // Team summary (งาน + โปรเจ็ค)
   const ts = {};
-  filtered.forEach(j=>{if(!ts[j.teamName])ts[j.teamName]={jobs:0,score:0};ts[j.teamName].jobs++;ts[j.teamName].score+=j.finalScore;});
-  const tData = [['ทีม','จำนวน Job','คะแนนรวม']];
-  Object.entries(ts).sort((a,b)=>b[1].score-a[1].score).forEach(([k,v])=>tData.push([k,v.jobs,v.score]));
+  const tRow = (id,name) => {
+    const k=String(id);
+    if(!ts[k]) ts[k]={name:name||'-',jobs:0,project:0,service:0,repair:0,install:0,other:0};
+    return ts[k];
+  };
+  filtered.forEach(j=>{
+    const b = jobBreakdown(j), t = tRow(j.teamId, j.teamName);
+    t.jobs++; ['service','repair','install','other'].forEach(k=>t[k]+=b[k]);
+  });
+  filteredPJ.forEach(p=>{ tRow(p.teamId, p.teamName).project += Number(p.score)||0; });
+  const tData = [['ทีม','จำนวน Job','🏗️ โปรเจ็ค','SERVICE','ซ่อม/อะไหล่','ติดตั้ง','อื่นๆ','คะแนนรวม']];
+  Object.values(ts)
+    .map(v=>({...v, total:v.project+v.service+v.repair+v.install+v.other}))
+    .sort((a,b)=>b.total-a.total)
+    .forEach(v=>tData.push([v.name,v.jobs,v.project,v.service,v.repair,v.install,v.other,v.total]));
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(tData), 'สรุปทีม');
+
+  // Per-project breakdown (โครงการ / Plot / ทีม)
+  const pm = {};
+  filteredPJ.forEach(p=>{
+    const sp = splitProjectName(p.projectName);
+    const key = sp.dev+'||'+(sp.plot||'—')+'||'+(p.teamName||'-');
+    pm[key] = (pm[key]||0) + (Number(p.score)||0);
+  });
+  const pData = [['โครงการ','Plot','ทีม','คะแนน']];
+  Object.entries(pm)
+    .sort((a,b)=>{
+      const A=a[0].split('||'), B=b[0].split('||');
+      const na=parseInt((A[1].match(/(\d+)/)||[])[1]||999999), nb=parseInt((B[1].match(/(\d+)/)||[])[1]||999999);
+      return A[0].localeCompare(B[0],'th') || (na-nb) || A[2].localeCompare(B[2],'th');
+    })
+    .forEach(([k,v])=>{ const a=k.split('||'); pData.push([a[0],a[1],a[2],v]); });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(pData), 'คะแนนโปรเจ็ค');
 
   XLSX.writeFile(wb, `airtech_report_${month||'all'}.xlsx`);
 }
